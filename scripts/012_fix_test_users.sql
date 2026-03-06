@@ -6,10 +6,12 @@
 -- =============================================
 
 -- Atualizar todos os usuarios existentes que tem senha placeholder
+-- Enum values: ADMIN, INSTITUTION, DONOR, CHECKER, ANALYST, GOV, ENVIRONMENTAL_COMPANY
+-- Status values: ACTIVE, INACTIVE, PENDING, SUSPENDED
 UPDATE users SET 
   password_hash = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
   "passwordHash" = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
-  status = 'active'
+  status = 'ACTIVE'
 WHERE password_hash LIKE '%placeholder%' 
    OR password_hash IS NULL 
    OR password_hash = ''
@@ -24,20 +26,20 @@ VALUES (
   '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
   'Admin STHATION',
   'ADMIN',
-  'active',
+  'ACTIVE',
   NOW(),
   NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
   password_hash = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
   "passwordHash" = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
-  status = 'active';
+  status = 'ACTIVE';
 
 -- Atualizar admin existente pelo email tambem
 UPDATE users SET 
   password_hash = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
   "passwordHash" = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
-  status = 'active'
+  status = 'ACTIVE'
 WHERE email IN ('admin@sthation.com', 'admin@sthation.io');
 
 -- Criar doador de teste se nao existir
@@ -48,15 +50,15 @@ VALUES (
   '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
   '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
   'Doador Teste',
-  'DOADOR',
-  'active',
+  'DONOR',
+  'ACTIVE',
   NOW(),
   NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
   password_hash = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
   "passwordHash" = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
-  status = 'active';
+  status = 'ACTIVE';
 
 -- Criar instituicao de teste se nao existir
 INSERT INTO users (id, email, password_hash, "passwordHash", name, role, status, "createdAt", "updatedAt")
@@ -66,15 +68,15 @@ VALUES (
   '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
   '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
   'Instituicao Teste',
-  'INSTITUICAO_SOCIAL',
-  'active',
+  'INSTITUTION',
+  'ACTIVE',
   NOW(),
   NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
   password_hash = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
   "passwordHash" = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
-  status = 'active';
+  status = 'ACTIVE';
 
 -- Criar checker de teste se nao existir
 INSERT INTO users (id, email, password_hash, "passwordHash", name, role, status, "createdAt", "updatedAt")
@@ -85,14 +87,14 @@ VALUES (
   '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
   'Checker Teste',
   'CHECKER',
-  'active',
+  'ACTIVE',
   NOW(),
   NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
   password_hash = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
   "passwordHash" = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/n3.gMuxZrPudB0p4LzXYe',
-  status = 'active';
+  status = 'ACTIVE';
 
 -- Listar usuarios criados/atualizados
 SELECT id, email, name, role, status FROM users 
