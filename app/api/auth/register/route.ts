@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { SignJWT } from "jose"
 
-// JWT Secret for token signing
+// JWT Secret para assinatura de tokens
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "sthation-nobis-secret-key-2025"
 )
@@ -19,15 +19,11 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { 
       email, password, name, role, phone, document,
-      // Novos campos para diferentes tipos de usuario
       cpfCnpj, personType, city, state, companyName,
-      // Campos para Checker
       profession, areasOfInterest, motivation,
-      // Campos para Certificador
       formation, institution, registrationNumber, registrationBody, specialties, curriculum, linkedIn
     } = body
 
-    // Validacoes basicas
     if (!email || !password || !name || !role) {
       return NextResponse.json(
         { error: "Campos obrigatorios: email, password, name, role" },
@@ -35,7 +31,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Mapear roles do frontend para os valores validos do enum no banco
+    // Mapeamento de roles para o enum do banco
     // Enum UserRole: ADMIN, INSTITUTION, DONOR, CHECKER, ANALYST, GOV, ENVIRONMENTAL_COMPANY
     const roleMapping: Record<string, string> = {
       "DONOR": "DONOR",
@@ -74,30 +70,18 @@ export async function POST(request: Request) {
       )
     }
 
-    // Hash da senha com bcrypt
+    // Hash da senha
     const saltRounds = 12
     const passwordHash = await bcrypt.hash(password, saltRounds)
 
-    // Preparar metadata adicional
+    // Metadata adicional
     const metadata = JSON.stringify({
-      personType,
-      city,
-      state,
-      companyName,
-      profession,
-      areasOfInterest,
-      motivation,
-      formation,
-      institution,
-      registrationNumber,
-      registrationBody,
-      specialties,
-      curriculum,
-      linkedIn,
+      personType, city, state, companyName,
+      profession, areasOfInterest, motivation,
+      formation, institution, registrationNumber, registrationBody, specialties, curriculum, linkedIn,
     })
 
-    // Criar usuario - usando colunas que existem no schema atual
-    // Schema: id, email, password_hash, passwordHash, name, role, status, phone, document, metadata, createdAt, updatedAt
+    // Criar usuario com colunas corretas do schema
     const newUser = await sql`
       INSERT INTO users (email, password_hash, "passwordHash", name, role, phone, document, status, metadata, "createdAt", "updatedAt")
       VALUES (
@@ -119,7 +103,6 @@ export async function POST(request: Request) {
     const user = newUser[0]
     const isVerified = user.status === 'ACTIVE'
 
-    // Gerar JWT token
     const token = await new SignJWT({
       userId: user.id,
       email: user.email,
@@ -131,7 +114,6 @@ export async function POST(request: Request) {
       .setExpirationTime("7d")
       .sign(JWT_SECRET)
 
-    // Log de registro
     console.log(`[AUTH] Novo usuario registrado: ${user.email} (${user.role})`)
 
     return NextResponse.json({

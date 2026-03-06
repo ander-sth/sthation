@@ -1,14 +1,15 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
-// GET funding projects from database
+// API para listar projetos de financiamento
+// Usa tabela "projects" (nao "funding_projects" que nao existe)
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const status = searchParams.get("status")
   const category = searchParams.get("category")
   const limitParam = parseInt(searchParams.get("limit") || "20")
 
-  // Verificar DATABASE_URL
   if (!process.env.DATABASE_URL) {
     console.error("[v0] DATABASE_URL not configured")
     return NextResponse.json({ projects: [] })
@@ -17,10 +18,6 @@ export async function GET(request: Request) {
   const sql = neon(process.env.DATABASE_URL)
 
   try {
-    // Query using the existing database schema:
-    // - projects table for funding data (targetAmount, currentAmount, status)
-    // - impact_action_cards for IAC details
-    // - organizations for institution info
     const projects = await sql`
       SELECT 
         p.id,
@@ -55,7 +52,6 @@ export async function GET(request: Request) {
       LIMIT ${limitParam}
     `
 
-    // Filtrar no JS para maior flexibilidade
     let filteredProjects = projects as any[]
 
     if (status) {
@@ -70,10 +66,9 @@ export async function GET(request: Request) {
       )
     }
 
-    // Transformar para o formato esperado pelo frontend
     const formattedProjects = filteredProjects.map((p) => ({
       id: p.id,
-      iacId: p.id, // Use project id as iacId for compatibility
+      iacId: p.id,
       title: p.title,
       description: p.description,
       category: p.category,
@@ -81,13 +76,13 @@ export async function GET(request: Request) {
       status: mapStatus(p.status),
       goalAmount: Number(p.goal_amount) || 0,
       currentAmount: Number(p.current_amount) || 0,
-      donorsCount: 0, // Not tracked in current schema
+      donorsCount: 0,
       deadline: p.deadline,
       location: {
         name: p.location_name,
         state: p.location_state,
       },
-      vcaScore: null, // Not available in projects table
+      vcaScore: null,
       estimatedBeneficiaries: p.beneficiaries,
       imageUrl: p.image_url,
       odsGoals: p.ods_goals || [],
@@ -101,7 +96,6 @@ export async function GET(request: Request) {
         pixHolderName: null,
       },
       createdAt: p.created_at,
-      // Calcular progresso
       progress: p.goal_amount > 0 ? Math.round((Number(p.current_amount) / Number(p.goal_amount)) * 100) : 0,
     }))
 
@@ -115,7 +109,6 @@ export async function GET(request: Request) {
   }
 }
 
-// Map database status to API status
 function mapStatus(dbStatus: string | null): string {
   if (!dbStatus) return 'FUNDING'
   const statusMap: Record<string, string> = {
