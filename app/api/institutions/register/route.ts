@@ -2,13 +2,20 @@ import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 import { jwtVerify } from "jose"
 
-const sql = neon(process.env.DATABASE_URL!)
+// Usar tabela "organizations" que existe no banco
+// Schema: id, name, type, description, document, logoUrl, website, address, city, state, phone, email, isVerified, createdAt, updatedAt
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "sthation-nobis-secret-key-2025"
 )
 
 export async function POST(request: Request) {
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json({ error: "Database not configured" }, { status: 500 })
+  }
+  
+  const sql = neon(process.env.DATABASE_URL)
+  
   try {
     // Verificar autenticacao
     const authHeader = request.headers.get("Authorization")
@@ -24,7 +31,7 @@ export async function POST(request: Request) {
     const userId = payload.userId as string
 
     const body = await request.json()
-    const { name, cnpj, type, description, city, state, address, phone, website, responsibleName, responsibleEmail, responsiblePhone, pixKey, pixKeyType, pixHolderName } = body
+    const { name, cnpj, type, description, city, state, address, phone, website, email } = body
 
     // Validacoes
     if (!name || !cnpj || !type || !description || !city || !state) {
@@ -34,83 +41,72 @@ export async function POST(request: Request) {
       )
     }
 
-    const validTypes = ["SOCIAL", "AMBIENTAL", "PREFEITURA"]
+    const validTypes = ["SOCIAL", "AMBIENTAL", "PREFEITURA", "social", "ambiental", "prefeitura"]
     if (!validTypes.includes(type)) {
       return NextResponse.json(
-        { error: `Tipo invalido. Permitidos: ${validTypes.join(", ")}` },
+        { error: `Tipo invalido. Permitidos: SOCIAL, AMBIENTAL, PREFEITURA` },
         { status: 400 }
       )
     }
 
-    // Verificar se CNPJ ja existe
-    const existingCnpj = await sql`
-      SELECT id FROM institutions WHERE cnpj = ${cnpj}
+    // Verificar se CNPJ/documento ja existe
+    const existingDoc = await sql`
+      SELECT id FROM organizations WHERE document = ${cnpj}
     `
-    if (existingCnpj.length > 0) {
+    if (existingDoc.length > 0) {
       return NextResponse.json(
         { error: "Este CNPJ ja esta cadastrado" },
         { status: 409 }
       )
     }
 
-    // Verificar se usuario ja tem instituicao
-    const existingInst = await sql`
-      SELECT id FROM institutions WHERE user_id = ${userId}
-    `
-    if (existingInst.length > 0) {
-      return NextResponse.json(
-        { error: "Voce ja possui uma instituicao cadastrada" },
-        { status: 409 }
-      )
-    }
-
-    // Criar instituicao (pendente de aprovacao)
-    const newInst = await sql`
-      INSERT INTO institutions (
-        user_id, name, cnpj, type, description, city, state, 
-        address, phone, website, responsible_name, responsible_email, responsible_phone,
-        pix_key, pix_key_type, pix_holder_name,
-        is_verified, created_at, updated_at
+    // Criar organizacao (pendente de aprovacao)
+    const newOrg = await sql`
+      INSERT INTO organizations (
+        name, document, type, description, city, state, 
+        address, phone, website, email,
+        "isVerified", "createdAt", "updatedAt"
       )
       VALUES (
-        ${userId},
         ${name},
         ${cnpj},
-        ${type},
+        ${type.toUpperCase()},
         ${description},
         ${city},
         ${state},
         ${address || null},
         ${phone || null},
         ${website || null},
-        ${responsibleName || null},
-        ${responsibleEmail || null},
-        ${responsiblePhone || null},
-        ${pixKey || null},
-        ${pixKeyType || null},
-        ${pixHolderName || null},
+        ${email || null},
         false,
         NOW(),
         NOW()
       )
-      RETURNING id, name, cnpj, type, is_verified, city, state, created_at
+      RETURNING id, name, document, type, "isVerified", city, state, "createdAt"
     `
 
-    const institution = newInst[0]
+    const organization = newOrg[0]
 
-    console.log(`[INSTITUTION] Nova instituicao cadastrada: ${institution.name} (${institution.type}) - Pendente aprovacao`)
+    // Atualizar o usuario para vincular a organizacao
+    await sql`
+      UPDATE users SET "organizationId" = ${organization.id}, "updatedAt" = NOW()
+      WHERE id = ${userId}
+    `
+
+    console.log(`[INSTITUTION] Nova organizacao cadastrada: ${organization.name} (${organization.type}) - Pendente aprovacao`)
 
     return NextResponse.json({
       success: true,
       message: "Instituicao cadastrada com sucesso. Aguardando aprovacao do administrador.",
       institution: {
-        id: institution.id,
-        name: institution.name,
-        cnpj: institution.cnpj,
-        type: institution.type,
-        isVerified: institution.is_verified,
-        city: institution.city,
-        state: institution.state,
+        id: organization.id,
+        name: organization.name,
+        cnpj: organization.document,
+        document: organization.document,
+        type: organization.type,
+        isVerified: organization.isVerified,
+        city: organization.city,
+        state: organization.state,
       },
     })
   } catch (error: any) {

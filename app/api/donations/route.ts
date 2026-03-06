@@ -2,13 +2,17 @@ import { neon } from '@neondatabase/serverless'
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
+// Usar tabela "donations" que existe no banco
+// Schema: id, amount, projectId, donorId, status, paymentMethod, message, metadata, 
+// dataHash, txHash, blockNumber, transactionId, stripe_*, split*, isAnonymous, createdAt, updatedAt, confirmedAt
+
 // Percentuais de split conforme documentacao STHATION
 const SPLIT_PERCENTAGES = {
-  INSTITUTION: 0.80,     // 80% para a instituicao
-  CHECKERS: 0.02,        // 2% para pool de checkers
-  CERTIFIERS: 0.02,      // 2% para pool de certificadores
-  GAS_RESERVE: 0.04,     // 4% para reserva de gas blockchain
-  STHATION: 0.12,        // 12% para STHATION (operacao)
+  INSTITUTION: 0.80,
+  CHECKERS: 0.02,
+  CERTIFIERS: 0.02,
+  GAS_RESERVE: 0.04,
+  STHATION: 0.12,
 }
 
 export async function POST(request: Request) {
@@ -19,12 +23,17 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { donor_id, funding_project_id, amount, payment_method } = body
+    const { donor_id, donorId, project_id, projectId, funding_project_id, amount, payment_method, paymentMethod, message, isAnonymous } = body
+
+    // Aceitar varios formatos de parametros
+    const finalDonorId = donor_id || donorId
+    const finalProjectId = project_id || projectId || funding_project_id
+    const finalPaymentMethod = payment_method || paymentMethod || 'PIX'
 
     // Validacoes
-    if (!donor_id || !funding_project_id || !amount) {
+    if (!finalDonorId || !finalProjectId || !amount) {
       return NextResponse.json(
-        { error: 'Missing required fields: donor_id, funding_project_id, amount' },
+        { error: 'Missing required fields: donorId, projectId, amount' },
         { status: 400 }
       )
     }
@@ -36,114 +45,107 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verificar se o projeto existe e esta em captacao
-    const [project] = await sql`
-      SELECT fp.id, fp.status, fp.goal_amount, fp.current_amount, iac.institution_id
-      FROM funding_projects fp
-      JOIN impact_action_cards iac ON fp.iac_id = iac.id
-      WHERE fp.id = ${funding_project_id}
+    // Verificar se o projeto existe (usando tabela projects)
+    const projects = await sql`
+      SELECT id, status, "targetAmount", "currentAmount", "organizationId"
+      FROM projects
+      WHERE id = ${finalProjectId}
     `
 
-    if (!project) {
+    if (!projects || projects.length === 0) {
       return NextResponse.json(
         { error: 'Project not found' },
         { status: 404 }
       )
     }
 
-    if (project.status !== 'FUNDING') {
+    const project = projects[0]
+
+    if (project.status === 'cancelled' || project.status === 'completed') {
       return NextResponse.json(
         { error: 'Project is not accepting donations' },
         { status: 400 }
       )
     }
 
-    // Gerar hash dos dados para blockchain
+    // Gerar hash dos dados
     const dataToHash = JSON.stringify({
-      donor_id,
-      funding_project_id,
+      donorId: finalDonorId,
+      projectId: finalProjectId,
       amount,
       timestamp: new Date().toISOString(),
     })
     const dataHash = '0x' + crypto.createHash('sha256').update(dataToHash).digest('hex')
+    const txHash = '0x' + crypto.randomBytes(32).toString('hex')
+    const blockNumber = Math.floor(50000000 + Math.random() * 1000000)
 
-    // Simular transacao na Polygon (em producao, usar ethers.js)
-    const polygonTxHash = '0x' + crypto.randomBytes(32).toString('hex')
-    const polygonBlockNumber = Math.floor(50000000 + Math.random() * 1000000)
+    // Calcular splits
+    const splitInstitution = amount * SPLIT_PERCENTAGES.INSTITUTION
+    const splitCheckers = amount * SPLIT_PERCENTAGES.CHECKERS
+    const splitCertifiers = amount * SPLIT_PERCENTAGES.CERTIFIERS
+    const splitGas = amount * SPLIT_PERCENTAGES.GAS_RESERVE
+    const splitSthation = amount * SPLIT_PERCENTAGES.STHATION
 
-    // Criar a doacao
+    // Criar a doacao usando colunas corretas
     const [donation] = await sql`
       INSERT INTO donations (
-        donor_id,
-        funding_project_id,
+        "donorId",
+        "projectId",
         amount,
-        payment_method,
-        payment_status,
-        data_hash,
-        polygon_tx_hash,
-        polygon_block_number,
-        confirmed_at
+        "paymentMethod",
+        status,
+        "dataHash",
+        "txHash",
+        "blockNumber",
+        message,
+        "isAnonymous",
+        "splitInstitution",
+        "splitCheckers",
+        "splitCertifiers",
+        "splitGas",
+        "splitSthation",
+        "confirmedAt",
+        "createdAt",
+        "updatedAt"
       ) VALUES (
-        ${donor_id},
-        ${funding_project_id},
+        ${finalDonorId},
+        ${finalProjectId},
         ${amount},
-        ${payment_method || 'PIX'},
-        'CONFIRMED',
+        ${finalPaymentMethod},
+        'confirmed',
         ${dataHash},
-        ${polygonTxHash},
-        ${polygonBlockNumber},
+        ${txHash},
+        ${blockNumber},
+        ${message || null},
+        ${isAnonymous || false},
+        ${splitInstitution},
+        ${splitCheckers},
+        ${splitCertifiers},
+        ${splitGas},
+        ${splitSthation},
+        NOW(),
+        NOW(),
         NOW()
       )
       RETURNING *
     `
 
-    // Criar os splits de pagamento
-    const splits = [
-      { type: 'INSTITUTION', percentage: SPLIT_PERCENTAGES.INSTITUTION, recipient_id: project.institution_id },
-      { type: 'CHECKERS_POOL', percentage: SPLIT_PERCENTAGES.CHECKERS, recipient_id: null },
-      { type: 'CERTIFIERS_POOL', percentage: SPLIT_PERCENTAGES.CERTIFIERS, recipient_id: null },
-      { type: 'GAS_RESERVE', percentage: SPLIT_PERCENTAGES.GAS_RESERVE, recipient_id: null },
-      { type: 'STHATION', percentage: SPLIT_PERCENTAGES.STHATION, recipient_id: null },
-    ]
-
-    for (const split of splits) {
-      const splitAmount = amount * split.percentage
-      await sql`
-        INSERT INTO payment_splits (
-          donation_id,
-          recipient_type,
-          recipient_id,
-          percentage,
-          amount,
-          status
-        ) VALUES (
-          ${donation.id},
-          ${split.type},
-          ${split.recipient_id},
-          ${split.percentage * 100},
-          ${splitAmount},
-          'PENDING'
-        )
-      `
-    }
-
     // Atualizar o valor arrecadado do projeto
     await sql`
-      UPDATE funding_projects
+      UPDATE projects
       SET 
-        current_amount = current_amount + ${amount},
-        donors_count = donors_count + 1,
-        updated_at = NOW()
-      WHERE id = ${funding_project_id}
+        "currentAmount" = "currentAmount" + ${amount},
+        "updatedAt" = NOW()
+      WHERE id = ${finalProjectId}
     `
 
     // Verificar se atingiu a meta
-    const newTotal = parseFloat(project.current_amount) + amount
-    if (newTotal >= parseFloat(project.goal_amount)) {
+    const newTotal = parseFloat(project.currentAmount || 0) + amount
+    if (project.targetAmount && newTotal >= parseFloat(project.targetAmount)) {
       await sql`
-        UPDATE funding_projects
-        SET status = 'FUNDED', updated_at = NOW()
-        WHERE id = ${funding_project_id}
+        UPDATE projects
+        SET status = 'funded', "updatedAt" = NOW()
+        WHERE id = ${finalProjectId}
       `
     }
 
@@ -152,11 +154,11 @@ export async function POST(request: Request) {
       donation: {
         id: donation.id,
         amount: donation.amount,
-        dataHash: donation.data_hash,
-        txHash: donation.polygon_tx_hash,
-        blockNumber: donation.polygon_block_number,
+        dataHash: donation.dataHash,
+        txHash: donation.txHash,
+        blockNumber: donation.blockNumber,
       },
-      message: 'Donation confirmed and registered on blockchain',
+      message: 'Donation confirmed and registered',
     })
   } catch (error) {
     console.error('Error processing donation:', error)
@@ -174,32 +176,43 @@ export async function GET(request: Request) {
   const sql = neon(process.env.DATABASE_URL)
 
   const { searchParams } = new URL(request.url)
-  const donor_id = searchParams.get('donor_id')
-  const project_id = searchParams.get('project_id')
+  const donor_id = searchParams.get('donor_id') || searchParams.get('donorId')
+  const project_id = searchParams.get('project_id') || searchParams.get('projectId')
   const limit = parseInt(searchParams.get('limit') || '20')
 
   try {
-    // Query simplificada usando tagged template literals
+    // Query usando tabelas corretas (projects em vez de funding_projects)
     const donations = await sql`
       SELECT 
-        d.*,
-        iac.title as project_title,
+        d.id,
+        d.amount,
+        d."projectId",
+        d."donorId",
+        d.status,
+        d."paymentMethod",
+        d.message,
+        d."dataHash",
+        d."txHash",
+        d."blockNumber",
+        d."isAnonymous",
+        d."createdAt",
+        d."confirmedAt",
+        p.title as project_title,
         u.name as donor_name
       FROM donations d
-      JOIN funding_projects fp ON d.funding_project_id = fp.id
-      JOIN impact_action_cards iac ON fp.iac_id = iac.id
-      JOIN users u ON d.donor_id = u.id
-      ORDER BY d.created_at DESC
+      LEFT JOIN projects p ON d."projectId" = p.id
+      LEFT JOIN users u ON d."donorId" = u.id
+      ORDER BY d."createdAt" DESC
       LIMIT ${limit}
     `
 
     // Filtrar no JS se necessario
-    let filtered = donations as any[]
+    let filtered = (donations || []) as any[]
     if (donor_id) {
-      filtered = filtered.filter(d => d.donor_id === donor_id)
+      filtered = filtered.filter(d => d.donorId === donor_id)
     }
     if (project_id) {
-      filtered = filtered.filter(d => d.funding_project_id === project_id)
+      filtered = filtered.filter(d => d.projectId === project_id)
     }
 
     return NextResponse.json({ donations: filtered })
