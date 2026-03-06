@@ -56,12 +56,6 @@ const navItems: NavItem[] = [
     label: "Projetos",
     roles: [UserRole.DOADOR],
   },
-  {
-    href: "/dashboard/donate",
-    icon: Heart,
-    label: "Doar",
-    roles: [UserRole.DOADOR],
-  },
 
   // Instituicao Social - gerencia seus projetos
   {
