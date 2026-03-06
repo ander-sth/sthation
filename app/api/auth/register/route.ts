@@ -74,16 +74,10 @@ export async function POST(request: Request) {
     const saltRounds = 12
     const passwordHash = await bcrypt.hash(password, saltRounds)
 
-    // Metadata adicional
-    const metadata = JSON.stringify({
-      personType, city, state, companyName,
-      profession, areasOfInterest, motivation,
-      formation, institution, registrationNumber, registrationBody, specialties, curriculum, linkedIn,
-    })
-
-    // Criar usuario com colunas corretas do schema
+    // Criar usuario com colunas que existem no schema
+    // Schema users: id, email, password_hash, passwordHash, name, role, status, phone, document, bio, avatarUrl, organizationId, createdAt, updatedAt
     const newUser = await sql`
-      INSERT INTO users (email, password_hash, "passwordHash", name, role, phone, document, status, metadata, "createdAt", "updatedAt")
+      INSERT INTO users (email, password_hash, "passwordHash", name, role, phone, document, status, "createdAt", "updatedAt")
       VALUES (
         ${email.toLowerCase()},
         ${passwordHash},
@@ -93,7 +87,6 @@ export async function POST(request: Request) {
         ${phone || null},
         ${cpfCnpj || document || null},
         'ACTIVE',
-        ${metadata}::jsonb,
         NOW(),
         NOW()
       )
