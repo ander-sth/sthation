@@ -1,98 +1,108 @@
+// IMPACT RECORDS API - NOVA VERSAO LIMPA
+// Usa tabela impact_action_cards e organizations (NAO institutions)
 import { neon } from "@neondatabase/serverless"
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 
-// API v2 - Usa tabelas corretas: impact_action_cards, organizations, trails
-
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   if (!process.env.DATABASE_URL) {
-    return NextResponse.json({ error: "Database not configured", records: [] }, { status: 500 })
+    return NextResponse.json({ records: [] })
   }
 
-  const sql = neon(process.env.DATABASE_URL)
+  const db = neon(process.env.DATABASE_URL)
+  const url = new URL(request.url)
+  const organizationId = url.searchParams.get("organization_id")
+  const maxResults = parseInt(url.searchParams.get("limit") || "50")
 
   try {
-    const { searchParams } = new URL(request.url)
-    const type = searchParams.get("type")
-    const limitNum = parseInt(searchParams.get("limit") || "50")
+    let records
 
-    // Buscar IACs com dados de organizacao e trails
-    // Usando tabelas que EXISTEM: impact_action_cards, organizations, trails
-    const results = await sql`
-      SELECT 
-        iac.id,
-        iac.title,
-        iac.description,
-        iac.category,
-        iac.status::text as status,
-        iac.city,
-        iac.state,
-        iac.budget,
-        iac.beneficiaries,
-        iac."verificationCode",
-        iac."imageUrl",
-        iac."odsGoals",
-        iac."createdAt",
-        o.id as org_id,
-        o.name as org_name,
-        o.type as org_type,
-        o."isVerified" as org_verified,
-        t.id as trail_id,
-        t."txHash",
-        t."blockNumber",
-        t."inscriptionId",
-        t."createdAt" as trail_created_at
-      FROM impact_action_cards iac
-      LEFT JOIN organizations o ON iac."organizationId" = o.id
-      LEFT JOIN trails t ON t."iacId" = iac.id
-      ORDER BY iac."createdAt" DESC
-      LIMIT ${limitNum}
-    `
-
-    // Filtrar por tipo se especificado
-    let filtered = (results || []) as any[]
-    if (type) {
-      filtered = filtered.filter((r: any) => 
-        r.category?.toLowerCase().includes(type.toLowerCase())
-      )
+    if (organizationId) {
+      records = await db`
+        SELECT 
+          iac.id,
+          iac.title,
+          iac.description,
+          iac.category,
+          iac.status::text as status,
+          iac."verificationCode",
+          iac.beneficiaries,
+          iac.budget,
+          iac.city,
+          iac.state,
+          iac."startDate",
+          iac."endDate",
+          iac."imageUrl",
+          iac."odsGoals",
+          iac."createdAt",
+          o.id as org_id,
+          o.name as org_name,
+          o."isVerified" as org_verified,
+          o.type as org_type
+        FROM impact_action_cards iac
+        LEFT JOIN organizations o ON iac."organizationId" = o.id
+        WHERE iac."organizationId" = ${organizationId}
+        ORDER BY iac."createdAt" DESC
+        LIMIT ${maxResults}
+      `
+    } else {
+      records = await db`
+        SELECT 
+          iac.id,
+          iac.title,
+          iac.description,
+          iac.category,
+          iac.status::text as status,
+          iac."verificationCode",
+          iac.beneficiaries,
+          iac.budget,
+          iac.city,
+          iac.state,
+          iac."startDate",
+          iac."endDate",
+          iac."imageUrl",
+          iac."odsGoals",
+          iac."createdAt",
+          o.id as org_id,
+          o.name as org_name,
+          o."isVerified" as org_verified,
+          o.type as org_type
+        FROM impact_action_cards iac
+        LEFT JOIN organizations o ON iac."organizationId" = o.id
+        ORDER BY iac."createdAt" DESC
+        LIMIT ${maxResults}
+      `
     }
 
-    const records = filtered.map((row: any) => ({
-      id: row.id,
-      title: row.title,
-      description: row.description,
-      category: row.category,
-      type: row.category?.toLowerCase().includes('ambiental') ? 'AMBIENTAL' : 'SOCIAL',
-      status: row.status,
-      location: {
-        name: row.city,
-        state: row.state,
+    const formattedRecords = (records || []).map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      category: r.category,
+      status: r.status,
+      verificationCode: r.verificationCode,
+      beneficiaries: r.beneficiaries,
+      budget: Number(r.budget) || 0,
+      location: r.city ? `${r.city}, ${r.state}` : null,
+      city: r.city,
+      state: r.state,
+      startDate: r.startDate,
+      endDate: r.endDate,
+      imageUrl: r.imageUrl,
+      odsGoals: r.odsGoals || [],
+      createdAt: r.createdAt,
+      institution: {
+        id: r.org_id,
+        name: r.org_name || "Organizacao",
+        verified: r.org_verified || false,
+        type: r.org_type,
       },
-      budget: parseFloat(row.budget) || 0,
-      estimatedBeneficiaries: row.beneficiaries,
-      verificationCode: row.verificationCode,
-      imageUrl: row.imageUrl,
-      odsGoals: row.odsGoals || [],
-      createdAt: row.createdAt,
-      organization: row.org_id ? {
-        id: row.org_id,
-        name: row.org_name,
-        type: row.org_type,
-        isVerified: row.org_verified,
-      } : null,
-      blockchain: row.trail_id ? {
-        trailId: row.trail_id,
-        txHash: row.txHash,
-        blockNumber: row.blockNumber,
-        inscriptionId: row.inscriptionId,
-        registeredAt: row.trail_created_at,
-      } : null,
     }))
 
-    return NextResponse.json({ records, total: records.length })
-  } catch (error) {
-    console.error("[API] Error fetching impact records:", error)
+    return NextResponse.json({ records: formattedRecords })
+  } catch (err) {
+    console.error("[IMPACT-RECORDS] Error:", err)
     return NextResponse.json(
-      { error: "Failed to fetch impact records", records: [] },
+      { error: "Failed to fetch records", records: [] },
       { status: 500 }
     )
   }

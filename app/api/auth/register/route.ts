@@ -1,48 +1,56 @@
-// REGISTER API v5 - TIMESTAMP: 2024-03-06-21-45-00
-// ESTA VERSAO USA gen_random_uuid() PARA GERAR ID
+// REGISTER API - NOVA VERSAO LIMPA
+// Criado em 2024-03-06 para resolver problema de cache
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 import { SignJWT } from "jose"
 import bcrypt from "bcryptjs"
 
-const JWT_SECRET_REGISTER = new TextEncoder().encode(
+const JWT_KEY = new TextEncoder().encode(
   process.env.JWT_SECRET || "sthation-nobis-secret-key-2025"
 )
 
-// Mapeamento de roles do frontend para enum do banco
-// Enum UserRole: ADMIN, INSTITUTION, DONOR, CHECKER, ANALYST, GOV, ENVIRONMENTAL_COMPANY
-const ROLE_MAP: Record<string, string> = {
-  "DONOR": "DONOR",
-  "DOADOR": "DONOR",
-  "INSTITUICAO": "INSTITUTION",
-  "INSTITUICAO_SOCIAL": "INSTITUTION",
-  "INSTITUTION": "INSTITUTION",
-  "EMPRESA_AMBIENTAL": "ENVIRONMENTAL_COMPANY",
-  "ENVIRONMENTAL_COMPANY": "ENVIRONMENTAL_COMPANY",
-  "PREFEITURA": "GOV",
-  "GOV": "GOV",
-  "CHECKER": "CHECKER",
-  "CERTIFIER": "CHECKER",
-  "ANALYST": "ANALYST",
-  "ADMIN": "ADMIN",
+// Mapeamento de roles
+const VALID_ROLES: Record<string, string> = {
+  DONOR: "DONOR",
+  DOADOR: "DONOR",
+  INSTITUICAO: "INSTITUTION",
+  INSTITUICAO_SOCIAL: "INSTITUTION",
+  INSTITUTION: "INSTITUTION",
+  EMPRESA_AMBIENTAL: "ENVIRONMENTAL_COMPANY",
+  ENVIRONMENTAL_COMPANY: "ENVIRONMENTAL_COMPANY",
+  PREFEITURA: "GOV",
+  GOV: "GOV",
+  CHECKER: "CHECKER",
+  CERTIFIER: "CHECKER",
+  ANALYST: "ANALYST",
+  ADMIN: "ADMIN",
 }
 
 export async function POST(request: Request) {
   if (!process.env.DATABASE_URL) {
-    return NextResponse.json({ error: "Database not configured" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Database not configured" },
+      { status: 500 }
+    )
   }
 
-  const sql = neon(process.env.DATABASE_URL)
+  const db = neon(process.env.DATABASE_URL)
 
   try {
     const body = await request.json()
     const {
-      email, password, name, role = "DONOR",
-      phone, cpfCnpj, document,
-      personType, companyName,
+      email,
+      password,
+      name,
+      role = "DONOR",
+      phone,
+      cpfCnpj,
+      document,
+      personType,
+      companyName,
     } = body
 
-    // Validacoes basicas
+    // Validacoes
     if (!email || !password || !name) {
       return NextResponse.json(
         { error: "Email, senha e nome sao obrigatorios" },
@@ -57,14 +65,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // Mapear role para valor valido do enum
-    const normalizedRole = ROLE_MAP[role.toUpperCase()] || "DONOR"
+    // Mapear role
+    const userRole = VALID_ROLES[role.toUpperCase()] || "DONOR"
 
-    // Verificar se email ja existe
-    const existingUsers = await sql`
+    // Verificar email existente
+    const existingUser = await db`
       SELECT id FROM users WHERE email = ${email.toLowerCase()}
     `
-    if (existingUsers.length > 0) {
+    if (existingUser.length > 0) {
       return NextResponse.json(
         { error: "Este email ja esta cadastrado" },
         { status: 409 }
@@ -72,72 +80,82 @@ export async function POST(request: Request) {
     }
 
     // Hash da senha
-    const passwordHash = await bcrypt.hash(password, 12)
+    const hashedPassword = await bcrypt.hash(password, 12)
 
     // Nome final
-    const finalName = personType === "PJ" && companyName ? companyName : name
+    const displayName = personType === "PJ" && companyName ? companyName : name
 
-    // Criar usuario - IMPORTANTE: usar gen_random_uuid() para gerar o ID
-    const newUser = await sql`
+    // Documento
+    const userDocument = cpfCnpj || document || null
+
+    // IMPORTANTE: Usar gen_random_uuid() para gerar ID
+    // Usar casts para enums: ::"UserRole" e ::"UserStatus"
+    const newUserResult = await db`
       INSERT INTO users (
-        id, 
-        email, 
-        password_hash, 
-        "passwordHash", 
-        name, 
-        role, 
-        phone, 
-        document, 
-        status, 
-        "createdAt", 
+        id,
+        email,
+        password_hash,
+        "passwordHash",
+        name,
+        role,
+        phone,
+        document,
+        status,
+        "createdAt",
         "updatedAt"
       )
       VALUES (
         gen_random_uuid(),
         ${email.toLowerCase()},
-        ${passwordHash},
-        ${passwordHash},
-        ${finalName},
-        ${normalizedRole}::"UserRole",
+        ${hashedPassword},
+        ${hashedPassword},
+        ${displayName},
+        ${userRole}::"UserRole",
         ${phone || null},
-        ${cpfCnpj || document || null},
+        ${userDocument},
         'ACTIVE'::"UserStatus",
         NOW(),
         NOW()
       )
-      RETURNING id, email, name, role::text as role, status::text as status, "createdAt"
+      RETURNING 
+        id, 
+        email, 
+        name, 
+        role::text as role, 
+        status::text as status, 
+        "createdAt"
     `
 
-    const user = newUser[0]
+    const createdUser = newUserResult[0]
 
-    // Gerar JWT token
-    const token = await new SignJWT({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      isVerified: user.status === "ACTIVE",
+    // Gerar token JWT
+    const jwtToken = await new SignJWT({
+      userId: createdUser.id,
+      email: createdUser.email,
+      role: createdUser.role,
+      isVerified: createdUser.status === "ACTIVE",
     })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("7d")
-      .sign(JWT_SECRET_REGISTER)
+      .sign(JWT_KEY)
 
-    console.log(`[AUTH] Novo usuario registrado: ${user.email} (${user.role})`)
+    console.log(`[REGISTER] Novo usuario: ${createdUser.email} (${createdUser.role})`)
 
     return NextResponse.json({
       success: true,
       message: "Usuario registrado com sucesso",
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        isVerified: user.status === "ACTIVE",
+        id: createdUser.id,
+        email: createdUser.email,
+        name: createdUser.name,
+        role: createdUser.role,
+        isVerified: createdUser.status === "ACTIVE",
       },
-      token,
+      token: jwtToken,
     })
-  } catch (error: any) {
-    console.error("[AUTH] Erro no registro:", error)
+  } catch (err: any) {
+    console.error("[REGISTER] Erro:", err)
     return NextResponse.json(
       { error: "Erro interno ao registrar usuario" },
       { status: 500 }
