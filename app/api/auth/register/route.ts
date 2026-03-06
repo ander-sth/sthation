@@ -77,6 +77,11 @@ export async function POST(request: Request) {
     // Criar usuario com colunas que existem no schema
     // Schema users: id, email, password_hash, passwordHash, name, role, status, phone, document, bio, avatarUrl, organizationId, createdAt, updatedAt
     // IMPORTANTE: id nao tem DEFAULT, precisa ser gerado manualmente com gen_random_uuid()
+    // IMPORTANTE: role e status sao enums, precisam de cast explicito
+    const finalName = personType === "PJ" && companyName ? companyName : name
+    const finalPhone = phone || null
+    const finalDocument = cpfCnpj || document || null
+    
     const newUser = await sql`
       INSERT INTO users (id, email, password_hash, "passwordHash", name, role, phone, document, status, "createdAt", "updatedAt")
       VALUES (
@@ -84,15 +89,15 @@ export async function POST(request: Request) {
         ${email.toLowerCase()},
         ${passwordHash},
         ${passwordHash},
-        ${personType === "PJ" && companyName ? companyName : name},
-        ${normalizedRole},
-        ${phone || null},
-        ${cpfCnpj || document || null},
-        'ACTIVE',
+        ${finalName},
+        ${normalizedRole}::"UserRole",
+        ${finalPhone},
+        ${finalDocument},
+        'ACTIVE'::"UserStatus",
         NOW(),
         NOW()
       )
-      RETURNING id, email, name, role, status, "createdAt"
+      RETURNING id, email, name, role::text, status::text, "createdAt"
     `
 
     const user = newUser[0]

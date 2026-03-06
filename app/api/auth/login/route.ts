@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { SignJWT } from "jose"
 
-// JWT Secret - v2 atualizado
+// JWT Secret - v3 FIXED
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "sthation-nobis-secret-key-2025"
 )
