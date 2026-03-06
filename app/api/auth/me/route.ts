@@ -2,6 +2,10 @@ import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 import { jwtVerify } from "jose"
 
+// Usar tabelas corretas: users e organizations
+// Schema users: id, email, password_hash, name, role, status, phone, document, organizationId, createdAt
+// Schema organizations: id, name, document, type, description, isVerified, city, state
+
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "sthation-nobis-secret-key-2025"
 )
@@ -14,7 +18,6 @@ export async function GET(request: Request) {
   const sql = neon(process.env.DATABASE_URL)
 
   try {
-    // Extrair token do header
     const authHeader = request.headers.get("Authorization")
     
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -25,13 +28,11 @@ export async function GET(request: Request) {
     }
 
     const token = authHeader.split(" ")[1]
-
-    // Verificar e decodificar JWT
     const { payload } = await jwtVerify(token, JWT_SECRET)
 
-    // Buscar usuario atualizado no banco
+    // Buscar usuario com colunas corretas
     const users = await sql`
-      SELECT id, email, name, role, is_verified, phone, document, created_at
+      SELECT id, email, name, role, status, phone, document, "organizationId", "createdAt"
       FROM users
       WHERE id = ${payload.userId as string}
     `
@@ -44,17 +45,28 @@ export async function GET(request: Request) {
     }
 
     const user = users[0]
+    const isVerified = user.status === 'ACTIVE'
 
-    // Buscar instituicao vinculada se existir
-    let institution = null
-    if (["INSTITUICAO", "EMPRESA_AMBIENTAL", "PREFEITURA"].includes(user.role)) {
-      const institutions = await sql`
-        SELECT id, name, cnpj, type, description, is_verified, city, state
-        FROM institutions
-        WHERE user_id = ${user.id}
+    // Buscar organizacao vinculada se existir
+    let organization = null
+    if (["INSTITUTION", "ENVIRONMENTAL_COMPANY", "GOV"].includes(user.role) && user.organizationId) {
+      const orgs = await sql`
+        SELECT id, name, document, type, description, "isVerified", city, state
+        FROM organizations
+        WHERE id = ${user.organizationId}
       `
-      if (institutions.length > 0) {
-        institution = institutions[0]
+      if (orgs.length > 0) {
+        organization = {
+          id: orgs[0].id,
+          name: orgs[0].name,
+          cnpj: orgs[0].document,
+          document: orgs[0].document,
+          type: orgs[0].type,
+          description: orgs[0].description,
+          isVerified: orgs[0].isVerified,
+          city: orgs[0].city,
+          state: orgs[0].state,
+        }
       }
     }
 
@@ -64,12 +76,14 @@ export async function GET(request: Request) {
         email: user.email,
         name: user.name,
         role: user.role,
-        isVerified: user.is_verified,
+        isVerified: isVerified,
         phone: user.phone,
         document: user.document,
-        createdAt: user.created_at,
+        organizationId: user.organizationId,
+        createdAt: user.createdAt,
       },
-      institution,
+      institution: organization,
+      organization: organization,
     })
   } catch (error: any) {
     if (error.code === "ERR_JWT_EXPIRED") {

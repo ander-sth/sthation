@@ -1,6 +1,8 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
+// Usar tabelas corretas: impact_action_cards e organizations
+
 export async function GET(request: Request) {
   if (!process.env.DATABASE_URL) {
     return NextResponse.json({ iacs: [] })
@@ -9,44 +11,58 @@ export async function GET(request: Request) {
   const sql = neon(process.env.DATABASE_URL)
   const { searchParams } = new URL(request.url)
   const institutionUserId = searchParams.get("institution_user_id")
+  const organizationId = searchParams.get("organization_id")
 
   try {
-    // Buscar IACs - se tiver institution_user_id, filtra pela instituicao do usuario
     let iacs
     
     if (institutionUserId) {
+      // Buscar IACs pelo usuario da organizacao
       iacs = await sql`
         SELECT 
           iac.*,
-          i.name as institution_name,
-          i.id as institution_id,
-          fp.current_amount,
-          fp.donors_count,
-          fp.goal_amount as funding_goal
+          o.name as organization_name,
+          o.id as organization_id
         FROM impact_action_cards iac
-        JOIN institutions i ON iac.institution_id = i.id
-        LEFT JOIN funding_projects fp ON fp.iac_id = iac.id
-        WHERE i.user_id = ${institutionUserId}
-        ORDER BY iac.created_at DESC
+        LEFT JOIN organizations o ON iac."organizationId" = o.id
+        LEFT JOIN users u ON u."organizationId" = o.id
+        WHERE u.id = ${institutionUserId}
+        ORDER BY iac."createdAt" DESC
+      `
+    } else if (organizationId) {
+      // Buscar IACs pela organizacao diretamente
+      iacs = await sql`
+        SELECT 
+          iac.*,
+          o.name as organization_name,
+          o.id as organization_id
+        FROM impact_action_cards iac
+        LEFT JOIN organizations o ON iac."organizationId" = o.id
+        WHERE iac."organizationId" = ${organizationId}
+        ORDER BY iac."createdAt" DESC
       `
     } else {
+      // Buscar todos
       iacs = await sql`
         SELECT 
           iac.*,
-          i.name as institution_name,
-          i.id as institution_id,
-          fp.current_amount,
-          fp.donors_count,
-          fp.goal_amount as funding_goal
+          o.name as organization_name,
+          o.id as organization_id
         FROM impact_action_cards iac
-        JOIN institutions i ON iac.institution_id = i.id
-        LEFT JOIN funding_projects fp ON fp.iac_id = iac.id
-        ORDER BY iac.created_at DESC
+        LEFT JOIN organizations o ON iac."organizationId" = o.id
+        ORDER BY iac."createdAt" DESC
         LIMIT 50
       `
     }
 
-    return NextResponse.json({ iacs })
+    // Formatar resposta
+    const formattedIacs = (iacs || []).map((iac: any) => ({
+      ...iac,
+      institution_name: iac.organization_name,
+      institution_id: iac.organization_id,
+    }))
+
+    return NextResponse.json({ iacs: formattedIacs })
   } catch (error) {
     console.error("Error fetching IACs:", error)
     return NextResponse.json({ iacs: [], error: "Failed to fetch IACs" })
@@ -66,92 +82,78 @@ export async function POST(request: Request) {
       title, 
       description, 
       category, 
+      city,
+      state,
       locationName, 
       locationState, 
-      targetBeneficiaries, 
-      fundingGoal, 
+      targetBeneficiaries,
+      beneficiaries, 
+      fundingGoal,
+      budget, 
       startDate, 
       endDate, 
-      objectives, 
-      methodology,
-      institutionId 
+      organizationId,
+      institutionId,
+      imageUrl,
+      odsGoals,
     } = body
 
-    if (!title || !description || !category || !institutionId) {
+    const finalOrgId = organizationId || institutionId
+    const finalCity = city || locationName
+    const finalState = state || locationState
+    const finalBeneficiaries = beneficiaries || targetBeneficiaries || 0
+    const finalBudget = budget || fundingGoal || 0
+
+    if (!title || !description || !category) {
       return NextResponse.json(
-        { error: "Campos obrigatorios: title, description, category, institutionId" },
+        { error: "Campos obrigatorios: title, description, category" },
         { status: 400 }
       )
     }
 
-    // Criar IAC
+    // Gerar codigo de verificacao
+    const verificationCode = `IAC-${Date.now().toString(36).toUpperCase()}`
+
+    // Criar IAC com colunas corretas
     const newIac = await sql`
       INSERT INTO impact_action_cards (
-        institution_id, 
+        "organizationId", 
         title, 
         description, 
         category,
-        tsb_category_id,
-        location_name,
-        location_state,
-        estimated_beneficiaries,
-        goal_amount,
-        start_date,
-        end_date,
-        objectives,
-        methodology,
+        city,
+        state,
+        beneficiaries,
+        budget,
+        "startDate",
+        "endDate",
+        "imageUrl",
+        "odsGoals",
+        "verificationCode",
         status,
-        created_at,
-        updated_at
+        "createdAt",
+        "updatedAt"
       )
       VALUES (
-        ${institutionId},
+        ${finalOrgId || null},
         ${title},
         ${description},
         ${category},
-        ${category},
-        ${locationName || null},
-        ${locationState || null},
-        ${parseInt(targetBeneficiaries) || 0},
-        ${parseFloat(fundingGoal) || 0},
+        ${finalCity || null},
+        ${finalState || null},
+        ${parseInt(finalBeneficiaries) || 0},
+        ${parseFloat(finalBudget) || 0},
         ${startDate || null},
         ${endDate || null},
-        ${objectives || null},
-        ${methodology || null},
-        'DRAFT',
+        ${imageUrl || null},
+        ${JSON.stringify(odsGoals || [])}::jsonb,
+        ${verificationCode},
+        'draft',
         NOW(),
         NOW()
       )
       RETURNING *
     `
-
-    // Criar funding_project automaticamente
-    if (newIac.length > 0) {
-      await sql`
-        INSERT INTO funding_projects (
-          iac_id,
-          title,
-          status,
-          goal_amount,
-          current_amount,
-          donors_count,
-          deadline,
-          created_at,
-          updated_at
-        )
-        VALUES (
-          ${newIac[0].id},
-          ${title},
-          'FUNDING',
-          ${parseFloat(fundingGoal) || 0},
-          0,
-          0,
-          ${endDate || null},
-          NOW(),
-          NOW()
-        )
-      `
-    }
 
     return NextResponse.json({ 
       success: true, 
