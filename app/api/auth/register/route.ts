@@ -76,9 +76,11 @@ export async function POST(request: Request) {
 
     // Criar usuario com colunas que existem no schema
     // Schema users: id, email, password_hash, passwordHash, name, role, status, phone, document, bio, avatarUrl, organizationId, createdAt, updatedAt
+    // IMPORTANTE: id nao tem DEFAULT, precisa ser gerado manualmente com gen_random_uuid()
     const newUser = await sql`
-      INSERT INTO users (email, password_hash, "passwordHash", name, role, phone, document, status, "createdAt", "updatedAt")
+      INSERT INTO users (id, email, password_hash, "passwordHash", name, role, phone, document, status, "createdAt", "updatedAt")
       VALUES (
+        gen_random_uuid(),
         ${email.toLowerCase()},
         ${passwordHash},
         ${passwordHash},
