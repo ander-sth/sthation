@@ -234,7 +234,8 @@ function StatCard({
 }
 
 function ProjectsToFund() {
-  const { data, isLoading } = useApiData<any[]>("/api/funding-projects?status=FUNDING&limit=3", {})
+  // Usar nova API para evitar cache com codigo antigo
+  const { data, isLoading } = useApiData<any[]>("/api/projetos-doar?limit=3", {})
 
   const projects = data?.projects || []
 
@@ -392,7 +393,8 @@ function MyIACs() {
 }
 
 function FundingProgress() {
-  const { data, isLoading } = useApiData<any[]>("/api/funding-projects?status=FUNDING&limit=3", {})
+  // Usar nova API para evitar cache com codigo antigo
+  const { data, isLoading } = useApiData<any[]>("/api/projetos-doar?limit=3", {})
   const projects = data?.projects || []
 
   return (
@@ -833,7 +835,8 @@ function PendingInscriptions() {
 
 // Estatisticas gerais da plataforma - visiveis para todos
 function PlatformStats() {
-  const { data } = useApiData<any>("/api/stats/platform", {})
+  // Usar nova API para evitar cache com codigo antigo
+  const { data } = useApiData<any>("/api/plataforma-stats", {})
   const stats = data?.stats || {}
   
   return (

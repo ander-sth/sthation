@@ -76,8 +76,8 @@ export default function DonatePage() {
   const [showPixModal, setShowPixModal] = useState(false)
   const [showStripeCheckout, setShowStripeCheckout] = useState(false)
 
-  // Buscar projetos da API (dados reais do banco)
-  const { data, isLoading } = useSWR("/api/funding-projects?status=FUNDING&limit=50", fetcher, {
+  // Buscar projetos da API (usando nova rota para evitar cache)
+  const { data, isLoading } = useSWR("/api/projetos-doar?limit=50", fetcher, {
     revalidateOnFocus: false,
   })
 
