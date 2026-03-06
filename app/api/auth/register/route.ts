@@ -79,32 +79,35 @@ export async function POST(request: Request) {
       linkedIn,
     })
 
-    // Criar usuario
+    // Criar usuario - usando colunas que existem no schema atual
+    // Schema: id, email, password_hash, passwordHash, name, role, status, phone, document, metadata, createdAt, updatedAt
     const newUser = await sql`
-      INSERT INTO users (email, password_hash, name, role, phone, document, is_verified, metadata, created_at, updated_at)
+      INSERT INTO users (email, password_hash, "passwordHash", name, role, phone, document, status, metadata, "createdAt", "updatedAt")
       VALUES (
         ${email.toLowerCase()},
+        ${passwordHash},
         ${passwordHash},
         ${personType === "PJ" && companyName ? companyName : name},
         ${normalizedRole},
         ${phone || null},
         ${cpfCnpj || document || null},
-        false,
+        'ACTIVE',
         ${metadata}::jsonb,
         NOW(),
         NOW()
       )
-      RETURNING id, email, name, role, is_verified, created_at
+      RETURNING id, email, name, role, status, "createdAt"
     `
 
     const user = newUser[0]
+    const isVerified = user.status === 'ACTIVE'
 
     // Gerar JWT token
     const token = await new SignJWT({
       userId: user.id,
       email: user.email,
       role: user.role,
-      isVerified: user.is_verified,
+      isVerified: isVerified,
     })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
@@ -122,7 +125,7 @@ export async function POST(request: Request) {
         email: user.email,
         name: user.name,
         role: user.role,
-        isVerified: user.is_verified,
+        isVerified: isVerified,
       },
       token,
     })
