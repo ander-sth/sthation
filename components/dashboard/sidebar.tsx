@@ -49,7 +49,13 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Visao Geral", exact: true },
 
-  // Doador
+  // Doador - Projetos para doar
+  {
+    href: "/dashboard/donate",
+    icon: FolderHeart,
+    label: "Projetos",
+    roles: [UserRole.DOADOR],
+  },
   {
     href: "/dashboard/donate",
     icon: Heart,
@@ -90,8 +96,8 @@ const navItems: NavItem[] = [
     roles: [UserRole.ANALISTA_CERTIFICADOR],
   },
 
-  // Hall de Impacto - visivel para todos
-  { href: "/hall-de-impacto", icon: Trophy, label: "Hall de Impacto" },
+  // Hall de Impacto - visivel para todos (dentro do dashboard)
+  { href: "/dashboard/impact", icon: Trophy, label: "Hall de Impacto" },
 
   // Meus Ativos - para quem gera ou recebe ativos
   {
