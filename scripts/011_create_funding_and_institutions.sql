@@ -4,7 +4,7 @@
 -- 1. Create institutions table if not exists
 CREATE TABLE IF NOT EXISTS institutions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID,
   name VARCHAR(255) NOT NULL,
   cnpj VARCHAR(18) UNIQUE,
   type VARCHAR(50) NOT NULL DEFAULT 'SOCIAL' CHECK (type IN ('SOCIAL', 'AMBIENTAL', 'PREFEITURA')),
@@ -133,15 +133,21 @@ WHERE NOT EXISTS (
 -- Update existing IACs with institution_id if they don't have one
 UPDATE impact_action_cards 
 SET institution_id = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'::UUID
-WHERE institution_id IS NULL 
-AND category ILIKE '%ambiental%' OR category ILIKE '%reciclagem%' OR category ILIKE '%compostagem%'
-LIMIT 3;
+WHERE id IN (
+  SELECT id FROM impact_action_cards
+  WHERE institution_id IS NULL 
+  AND (category ILIKE '%ambiental%' OR category ILIKE '%reciclagem%' OR category ILIKE '%compostagem%')
+  LIMIT 3
+);
 
 UPDATE impact_action_cards 
 SET institution_id = 'b2c3d4e5-f6a7-8901-bcde-f12345678901'::UUID
-WHERE institution_id IS NULL 
-AND (category ILIKE '%social%' OR category ILIKE '%alimentacao%' OR category ILIKE '%educacao%')
-LIMIT 3;
+WHERE id IN (
+  SELECT id FROM impact_action_cards
+  WHERE institution_id IS NULL 
+  AND (category ILIKE '%social%' OR category ILIKE '%alimentacao%' OR category ILIKE '%educacao%')
+  LIMIT 3
+);
 
 -- Create funding projects from existing IACs that are validated/certified
 INSERT INTO funding_projects (id, iac_id, goal_amount, current_amount, donors_count, status, deadline)
