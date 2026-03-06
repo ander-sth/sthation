@@ -1,8 +1,9 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
-// API para listar projetos de financiamento - v3 FIXED
-// Usa tabela "projects" - Corrigido enum cast com ::text
+// API para listar projetos de financiamento - v4 FINAL
+// Usa tabela "projects" - status::text para converter enum
+// Atualizado para forcar reload do servidor
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)

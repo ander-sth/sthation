@@ -3,10 +3,12 @@ import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { SignJWT } from "jose"
 
-// JWT Secret para assinatura de tokens - v2
+// JWT Secret - v4 FINAL FIX
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "sthation-nobis-secret-key-2025"
 )
+
+// VERSAO CORRIGIDA - usa gen_random_uuid() e casts para enums
 
 export async function POST(request: Request) {
   if (!process.env.DATABASE_URL) {
