@@ -1,7 +1,9 @@
+// HANDLER v7 - TIMESTAMP: 2024-03-06-22-00-00
+// ESTE ARQUIVO USA p.status::text PARA CONVERTER ENUM
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
-// Handler separado para forçar reload do servidor
+// Handler separado - USA status::text NAO compara com 'cancelled' no SQL
 export async function handleGetFundingProjects(request: Request) {
   const { searchParams } = new URL(request.url)
   const status = searchParams.get("status")

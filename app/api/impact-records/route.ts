@@ -1,6 +1,8 @@
 import { neon } from "@neondatabase/serverless"
 import { NextRequest, NextResponse } from "next/server"
 
+// API v2 - Usa tabelas corretas: impact_action_cards, organizations, trails
+
 export async function GET(request: NextRequest) {
   if (!process.env.DATABASE_URL) {
     return NextResponse.json({ error: "Database not configured", records: [] }, { status: 500 })
@@ -10,115 +12,80 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const type = searchParams.get("type") // SOCIAL ou AMBIENTAL
-    const limit = searchParams.get("limit") || "50"
+    const type = searchParams.get("type")
+    const limitNum = parseInt(searchParams.get("limit") || "50")
 
-    // Buscar projetos finalizados/certificados com registro blockchain
-    // Usar tagged template literal para Neon
-    let results
+    // Buscar IACs com dados de organizacao e trails
+    // Usando tabelas que EXISTEM: impact_action_cards, organizations, trails
+    const results = await sql`
+      SELECT 
+        iac.id,
+        iac.title,
+        iac.description,
+        iac.category,
+        iac.status::text as status,
+        iac.city,
+        iac.state,
+        iac.budget,
+        iac.beneficiaries,
+        iac."verificationCode",
+        iac."imageUrl",
+        iac."odsGoals",
+        iac."createdAt",
+        o.id as org_id,
+        o.name as org_name,
+        o.type as org_type,
+        o."isVerified" as org_verified,
+        t.id as trail_id,
+        t."txHash",
+        t."blockNumber",
+        t."inscriptionId",
+        t."createdAt" as trail_created_at
+      FROM impact_action_cards iac
+      LEFT JOIN organizations o ON iac."organizationId" = o.id
+      LEFT JOIN trails t ON t."iacId" = iac.id
+      ORDER BY iac."createdAt" DESC
+      LIMIT ${limitNum}
+    `
+
+    // Filtrar por tipo se especificado
+    let filtered = (results || []) as any[]
     if (type) {
-      results = await sql`
-        SELECT 
-          iac.id,
-          iac.title,
-          iac.description,
-          iac.category,
-          iac.type,
-          iac.status,
-          iac.location_name,
-          iac.location_state,
-          iac.budget,
-          iac.estimated_beneficiaries,
-          iac.vca_score,
-          iac.created_at,
-          i.id as institution_id,
-          i.name as institution_name,
-          i.type as institution_type,
-          pt.trail_id,
-          pt.polygon_tx_hash,
-          pt.polygon_block_number,
-          pt.polygon_registered_at,
-          pt.data_hash,
-          fp.current_amount as total_raised,
-          fp.donors_count,
-          (SELECT COUNT(*) FROM donations d WHERE d.funding_project_id = fp.id) as donation_count
-        FROM impact_action_cards iac
-        LEFT JOIN institutions i ON iac.institution_id = i.id
-        LEFT JOIN pipeline_trails pt ON pt.iac_id = iac.id AND pt.polygon_registered = true
-        LEFT JOIN funding_projects fp ON fp.iac_id = iac.id
-        WHERE iac.status IN ('VALIDATED', 'CERTIFIED', 'MINTED')
-        AND iac.type = ${type}
-        ORDER BY pt.polygon_registered_at DESC NULLS LAST, iac.created_at DESC
-        LIMIT ${parseInt(limit)}
-      `
-    } else {
-      results = await sql`
-        SELECT 
-          iac.id,
-          iac.title,
-          iac.description,
-          iac.category,
-          iac.type,
-          iac.status,
-          iac.location_name,
-          iac.location_state,
-          iac.budget,
-          iac.estimated_beneficiaries,
-          iac.vca_score,
-          iac.created_at,
-          i.id as institution_id,
-          i.name as institution_name,
-          i.type as institution_type,
-          pt.trail_id,
-          pt.polygon_tx_hash,
-          pt.polygon_block_number,
-          pt.polygon_registered_at,
-          pt.data_hash,
-          fp.current_amount as total_raised,
-          fp.donors_count,
-          (SELECT COUNT(*) FROM donations d WHERE d.funding_project_id = fp.id) as donation_count
-        FROM impact_action_cards iac
-        LEFT JOIN institutions i ON iac.institution_id = i.id
-        LEFT JOIN pipeline_trails pt ON pt.iac_id = iac.id AND pt.polygon_registered = true
-        LEFT JOIN funding_projects fp ON fp.iac_id = iac.id
-        WHERE iac.status IN ('VALIDATED', 'CERTIFIED', 'MINTED')
-        ORDER BY pt.polygon_registered_at DESC NULLS LAST, iac.created_at DESC
-        LIMIT ${parseInt(limit)}
-      `
+      filtered = filtered.filter((r: any) => 
+        r.category?.toLowerCase().includes(type.toLowerCase())
+      )
     }
 
-    const records = results.map((row: any) => ({
+    const records = filtered.map((row: any) => ({
       id: row.id,
       title: row.title,
       description: row.description,
       category: row.category,
-      type: row.type,
+      type: row.category?.toLowerCase().includes('ambiental') ? 'AMBIENTAL' : 'SOCIAL',
       status: row.status,
       location: {
-        name: row.location_name,
-        state: row.location_state,
+        name: row.city,
+        state: row.state,
       },
       budget: parseFloat(row.budget) || 0,
-      estimatedBeneficiaries: row.estimated_beneficiaries,
-      vcaScore: row.vca_score ? parseFloat(row.vca_score) : null,
-      createdAt: row.created_at,
-      organization: {
-        id: row.institution_id,
-        name: row.institution_name,
-        type: row.institution_type,
-      },
+      estimatedBeneficiaries: row.beneficiaries,
+      verificationCode: row.verificationCode,
+      imageUrl: row.imageUrl,
+      odsGoals: row.odsGoals || [],
+      createdAt: row.createdAt,
+      organization: row.org_id ? {
+        id: row.org_id,
+        name: row.org_name,
+        type: row.org_type,
+        isVerified: row.org_verified,
+      } : null,
       blockchain: row.trail_id ? {
         trailId: row.trail_id,
-        txHash: row.polygon_tx_hash,
-        blockNumber: row.polygon_block_number,
-        registeredAt: row.polygon_registered_at,
-        dataHash: row.data_hash,
+        txHash: row.txHash,
+        blockNumber: row.blockNumber,
+        inscriptionId: row.inscriptionId,
+        registeredAt: row.trail_created_at,
       } : null,
-      impact: {
-        totalRaised: parseFloat(row.total_raised) || 0,
-        donorsCount: row.donors_count || 0,
-        donationCount: parseInt(row.donation_count) || 0,
-      },
     }))
 
     return NextResponse.json({ records, total: records.length })
