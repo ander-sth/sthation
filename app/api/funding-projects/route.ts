@@ -16,41 +16,41 @@ export async function GET(request: Request) {
   const sql = neon(process.env.DATABASE_URL)
 
   try {
+    // Query using the existing database schema:
+    // - projects table for funding data (targetAmount, currentAmount, status)
+    // - impact_action_cards for IAC details
+    // - organizations for institution info
     const projects = await sql`
       SELECT 
-        fp.id,
-        fp.iac_id,
-        iac.title,
-        iac.description,
-        iac.category,
-        iac.tsb_category_id,
-        fp.status,
-        fp.goal_amount,
-        fp.current_amount,
-        fp.donors_count,
-        fp.deadline,
-        iac.location_name,
-        iac.location_state,
-        iac.vca_score,
-        iac.estimated_beneficiaries,
-        inst.name as institution_name,
-        inst.id as institution_id,
-        inst.is_verified as institution_verified,
-        inst.pix_key,
-        inst.pix_key_type,
-        inst.pix_holder_name,
-        fp.created_at
-      FROM funding_projects fp
-      JOIN impact_action_cards iac ON fp.iac_id = iac.id
-      JOIN institutions inst ON iac.institution_id = inst.id
-      WHERE fp.status != 'CANCELLED'
+        p.id,
+        p.title,
+        p.description,
+        p.category,
+        p.subcategory,
+        p.status,
+        p."targetAmount" as goal_amount,
+        p."currentAmount" as current_amount,
+        p.beneficiaries,
+        p."endDate" as deadline,
+        p.city as location_name,
+        p.state as location_state,
+        p."imageUrl" as image_url,
+        p."odsGoals" as ods_goals,
+        p."createdAt" as created_at,
+        org.name as institution_name,
+        org.id as institution_id,
+        org."isVerified" as institution_verified,
+        org.type as institution_type
+      FROM projects p
+      LEFT JOIN organizations org ON p."organizationId" = org.id
+      WHERE p.status != 'cancelled'
       ORDER BY 
-        CASE fp.status 
-          WHEN 'FUNDING' THEN 1 
-          WHEN 'FUNDED' THEN 2 
-          WHEN 'COMPLETED' THEN 3 
+        CASE p.status::text
+          WHEN 'active' THEN 1 
+          WHEN 'funded' THEN 2 
+          WHEN 'completed' THEN 3 
         END,
-        fp.created_at DESC
+        p."createdAt" DESC
       LIMIT ${limitParam}
     `
 
@@ -58,41 +58,46 @@ export async function GET(request: Request) {
     let filteredProjects = projects as any[]
 
     if (status) {
-      filteredProjects = filteredProjects.filter((p) => p.status === status)
+      filteredProjects = filteredProjects.filter((p) => 
+        p.status?.toLowerCase() === status.toLowerCase()
+      )
     }
 
     if (category) {
       filteredProjects = filteredProjects.filter((p) =>
-        p.category.toLowerCase().includes(category.toLowerCase())
+        p.category?.toLowerCase().includes(category.toLowerCase())
       )
     }
 
     // Transformar para o formato esperado pelo frontend
     const formattedProjects = filteredProjects.map((p) => ({
       id: p.id,
-      iacId: p.iac_id,
+      iacId: p.id, // Use project id as iacId for compatibility
       title: p.title,
       description: p.description,
       category: p.category,
-      tsbCategoryId: p.tsb_category_id,
-      status: p.status,
-      goalAmount: Number(p.goal_amount),
-      currentAmount: Number(p.current_amount),
-      donorsCount: p.donors_count,
+      subcategory: p.subcategory,
+      status: mapStatus(p.status),
+      goalAmount: Number(p.goal_amount) || 0,
+      currentAmount: Number(p.current_amount) || 0,
+      donorsCount: 0, // Not tracked in current schema
       deadline: p.deadline,
       location: {
         name: p.location_name,
         state: p.location_state,
       },
-      vcaScore: p.vca_score ? Number(p.vca_score) : null,
-      estimatedBeneficiaries: p.estimated_beneficiaries,
+      vcaScore: null, // Not available in projects table
+      estimatedBeneficiaries: p.beneficiaries,
+      imageUrl: p.image_url,
+      odsGoals: p.ods_goals || [],
       institution: {
         id: p.institution_id,
-        name: p.institution_name,
-        verified: p.institution_verified,
-        pixKey: p.pix_key,
-        pixKeyType: p.pix_key_type,
-        pixHolderName: p.pix_holder_name,
+        name: p.institution_name || 'Instituicao',
+        verified: p.institution_verified || false,
+        type: p.institution_type,
+        pixKey: null,
+        pixKeyType: null,
+        pixHolderName: null,
       },
       createdAt: p.created_at,
       // Calcular progresso
@@ -107,4 +112,17 @@ export async function GET(request: Request) {
       { status: 500 }
     )
   }
+}
+
+// Map database status to API status
+function mapStatus(dbStatus: string | null): string {
+  if (!dbStatus) return 'FUNDING'
+  const statusMap: Record<string, string> = {
+    'active': 'FUNDING',
+    'funded': 'FUNDED',
+    'executing': 'EXECUTING',
+    'completed': 'COMPLETED',
+    'cancelled': 'CANCELLED',
+  }
+  return statusMap[dbStatus.toLowerCase()] || 'FUNDING'
 }
