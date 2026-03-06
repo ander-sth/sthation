@@ -1,8 +1,8 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
-// API para listar projetos de financiamento
-// Usa tabela "projects" (nao "funding_projects" que nao existe)
+// API para listar projetos de financiamento - v2
+// Usa tabela "projects" - Atualizado em 2024
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
