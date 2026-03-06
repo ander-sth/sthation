@@ -44,34 +44,23 @@ export async function POST(request: Request) {
     
     // O banco pode ter senha em password_hash ou passwordHash
     const storedHash = user.password_hash || user.passwordHash
-    
-    console.log(`[v0] Login attempt for: ${email}`)
-    console.log(`[v0] User found: ${user.email}, role: ${user.role}, status: ${user.status}`)
-    console.log(`[v0] Has password_hash: ${!!user.password_hash}, Has passwordHash: ${!!user.passwordHash}`)
-    console.log(`[v0] Stored hash starts with: ${storedHash?.substring(0, 10)}...`)
 
     // Verificar senha - primeiro tenta comparacao direta, depois bcrypt
     let passwordMatch = false
     
     // Comparacao direta (senha em texto plano)
     if (password === storedHash) {
-      console.log(`[v0] Password matched via direct comparison`)
       passwordMatch = true
     } else if (storedHash && storedHash.startsWith('$2')) {
       // Se comeca com $2, e um hash bcrypt
       try {
         passwordMatch = await bcrypt.compare(password, storedHash)
-        console.log(`[v0] Bcrypt comparison result: ${passwordMatch}`)
-      } catch (bcryptError) {
-        console.log(`[v0] Bcrypt error:`, bcryptError)
+      } catch {
         passwordMatch = false
       }
-    } else {
-      console.log(`[v0] No valid hash found or hash format not recognized`)
     }
 
     if (!passwordMatch) {
-      console.log(`[v0] Password did not match for ${email}`)
       return NextResponse.json(
         { error: "Email ou senha incorretos" },
         { status: 401 }
