@@ -18,6 +18,7 @@ export async function GET(request: Request) {
   const sql = neon(process.env.DATABASE_URL)
 
   try {
+    // Buscar todos os projetos sem filtrar por status no SQL (enum pode ter valores diferentes)
     const projects = await sql`
       SELECT 
         p.id,
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
         p.description,
         p.category,
         p.subcategory,
-        p.status,
+        p.status::text as status,
         p."targetAmount" as goal_amount,
         p."currentAmount" as current_amount,
         p.beneficiaries,
@@ -41,14 +42,7 @@ export async function GET(request: Request) {
         org.type as institution_type
       FROM projects p
       LEFT JOIN organizations org ON p."organizationId" = org.id
-      WHERE p.status != 'cancelled'
-      ORDER BY 
-        CASE p.status::text
-          WHEN 'active' THEN 1 
-          WHEN 'funded' THEN 2 
-          WHEN 'completed' THEN 3 
-        END,
-        p."createdAt" DESC
+      ORDER BY p."createdAt" DESC
       LIMIT ${limitParam}
     `
 
