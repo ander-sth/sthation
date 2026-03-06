@@ -1,14 +1,29 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
-import bcrypt from "bcryptjs"
 import { SignJWT } from "jose"
+import bcrypt from "bcryptjs"
 
-// JWT Secret - v4 FINAL FIX
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "sthation-nobis-secret-key-2025"
 )
 
-// VERSAO CORRIGIDA - usa gen_random_uuid() e casts para enums
+// Mapeamento de roles do frontend para enum do banco
+// Enum UserRole: ADMIN, INSTITUTION, DONOR, CHECKER, ANALYST, GOV, ENVIRONMENTAL_COMPANY
+const ROLE_MAP: Record<string, string> = {
+  "DONOR": "DONOR",
+  "DOADOR": "DONOR",
+  "INSTITUICAO": "INSTITUTION",
+  "INSTITUICAO_SOCIAL": "INSTITUTION",
+  "INSTITUTION": "INSTITUTION",
+  "EMPRESA_AMBIENTAL": "ENVIRONMENTAL_COMPANY",
+  "ENVIRONMENTAL_COMPANY": "ENVIRONMENTAL_COMPANY",
+  "PREFEITURA": "GOV",
+  "GOV": "GOV",
+  "CHECKER": "CHECKER",
+  "CERTIFIER": "CHECKER",
+  "ANALYST": "ANALYST",
+  "ADMIN": "ADMIN",
+}
 
 export async function POST(request: Request) {
   if (!process.env.DATABASE_URL) {
@@ -19,53 +34,35 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { 
-      email, password, name, role, phone, document,
-      cpfCnpj, personType, city, state, companyName,
-      profession, areasOfInterest, motivation,
-      formation, institution, registrationNumber, registrationBody, specialties, curriculum, linkedIn
+    const {
+      email, password, name, role = "DONOR",
+      phone, cpfCnpj, document,
+      personType, companyName,
     } = body
 
-    if (!email || !password || !name || !role) {
+    // Validacoes basicas
+    if (!email || !password || !name) {
       return NextResponse.json(
-        { error: "Campos obrigatorios: email, password, name, role" },
+        { error: "Email, senha e nome sao obrigatorios" },
         { status: 400 }
       )
     }
 
-    // Mapeamento de roles para o enum do banco
-    // Enum UserRole: ADMIN, INSTITUTION, DONOR, CHECKER, ANALYST, GOV, ENVIRONMENTAL_COMPANY
-    const roleMapping: Record<string, string> = {
-      "DONOR": "DONOR",
-      "DOADOR": "DONOR",
-      "INSTITUICAO": "INSTITUTION",
-      "INSTITUICAO_SOCIAL": "INSTITUTION",
-      "INSTITUTION": "INSTITUTION",
-      "EMPRESA_AMBIENTAL": "ENVIRONMENTAL_COMPANY",
-      "ENVIRONMENTAL_COMPANY": "ENVIRONMENTAL_COMPANY",
-      "PREFEITURA": "GOV",
-      "GOV": "GOV",
-      "CHECKER": "CHECKER",
-      "CERTIFIER": "CHECKER",
-      "ANALYST": "ANALYST",
-      "ADMIN": "ADMIN",
-    }
-    
-    const normalizedRole = roleMapping[role.toUpperCase()]
-    
-    if (!normalizedRole) {
+    if (password.length < 6) {
       return NextResponse.json(
-        { error: `Role invalido: ${role}. Permitidos: DONOR, INSTITUTION, CHECKER, GOV, ENVIRONMENTAL_COMPANY, ANALYST` },
+        { error: "Senha deve ter no minimo 6 caracteres" },
         { status: 400 }
       )
     }
+
+    // Mapear role para valor valido do enum
+    const normalizedRole = ROLE_MAP[role.toUpperCase()] || "DONOR"
 
     // Verificar se email ja existe
-    const existingUser = await sql`
+    const existingUsers = await sql`
       SELECT id FROM users WHERE email = ${email.toLowerCase()}
     `
-
-    if (existingUser.length > 0) {
+    if (existingUsers.length > 0) {
       return NextResponse.json(
         { error: "Este email ja esta cadastrado" },
         { status: 409 }
@@ -73,19 +70,26 @@ export async function POST(request: Request) {
     }
 
     // Hash da senha
-    const saltRounds = 12
-    const passwordHash = await bcrypt.hash(password, saltRounds)
+    const passwordHash = await bcrypt.hash(password, 12)
 
-    // Criar usuario com colunas que existem no schema
-    // Schema users: id, email, password_hash, passwordHash, name, role, status, phone, document, bio, avatarUrl, organizationId, createdAt, updatedAt
-    // IMPORTANTE: id nao tem DEFAULT, precisa ser gerado manualmente com gen_random_uuid()
-    // IMPORTANTE: role e status sao enums, precisam de cast explicito
+    // Nome final
     const finalName = personType === "PJ" && companyName ? companyName : name
-    const finalPhone = phone || null
-    const finalDocument = cpfCnpj || document || null
-    
+
+    // Criar usuario - IMPORTANTE: usar gen_random_uuid() para gerar o ID
     const newUser = await sql`
-      INSERT INTO users (id, email, password_hash, "passwordHash", name, role, phone, document, status, "createdAt", "updatedAt")
+      INSERT INTO users (
+        id, 
+        email, 
+        password_hash, 
+        "passwordHash", 
+        name, 
+        role, 
+        phone, 
+        document, 
+        status, 
+        "createdAt", 
+        "updatedAt"
+      )
       VALUES (
         gen_random_uuid(),
         ${email.toLowerCase()},
@@ -93,23 +97,23 @@ export async function POST(request: Request) {
         ${passwordHash},
         ${finalName},
         ${normalizedRole}::"UserRole",
-        ${finalPhone},
-        ${finalDocument},
+        ${phone || null},
+        ${cpfCnpj || document || null},
         'ACTIVE'::"UserStatus",
         NOW(),
         NOW()
       )
-      RETURNING id, email, name, role::text, status::text, "createdAt"
+      RETURNING id, email, name, role::text as role, status::text as status, "createdAt"
     `
 
     const user = newUser[0]
-    const isVerified = user.status === 'ACTIVE'
 
+    // Gerar JWT token
     const token = await new SignJWT({
       userId: user.id,
       email: user.email,
       role: user.role,
-      isVerified: isVerified,
+      isVerified: user.status === "ACTIVE",
     })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
@@ -126,11 +130,11 @@ export async function POST(request: Request) {
         email: user.email,
         name: user.name,
         role: user.role,
-        isVerified: isVerified,
+        isVerified: user.status === "ACTIVE",
       },
       token,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("[AUTH] Erro no registro:", error)
     return NextResponse.json(
       { error: "Erro interno ao registrar usuario" },

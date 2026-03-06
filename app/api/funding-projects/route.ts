@@ -1,10 +1,6 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
-// API para listar projetos de financiamento - v4 FINAL
-// Usa tabela "projects" - status::text para converter enum
-// Atualizado para forcar reload do servidor
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const status = searchParams.get("status")
@@ -19,7 +15,7 @@ export async function GET(request: Request) {
   const sql = neon(process.env.DATABASE_URL)
 
   try {
-    // Buscar todos os projetos sem filtrar por status no SQL (enum pode ter valores diferentes)
+    // Buscar projetos - convertendo enum status para texto com ::text
     const projects = await sql`
       SELECT 
         p.id,
@@ -47,20 +43,29 @@ export async function GET(request: Request) {
       LIMIT ${limitParam}
     `
 
-    let filteredProjects = projects as any[]
+    // Filtrar no JS
+    let filteredProjects = (projects || []) as any[]
 
+    // Filtrar por status se especificado
     if (status) {
       filteredProjects = filteredProjects.filter((p) => 
         p.status?.toLowerCase() === status.toLowerCase()
       )
     }
 
+    // Filtrar por categoria se especificado
     if (category) {
       filteredProjects = filteredProjects.filter((p) =>
         p.category?.toLowerCase().includes(category.toLowerCase())
       )
     }
 
+    // Excluir cancelados por padrao
+    filteredProjects = filteredProjects.filter((p) => 
+      p.status?.toLowerCase() !== "cancelled" && p.status?.toLowerCase() !== "canceled"
+    )
+
+    // Formatar projetos
     const formattedProjects = filteredProjects.map((p) => ({
       id: p.id,
       iacId: p.id,
@@ -83,7 +88,7 @@ export async function GET(request: Request) {
       odsGoals: p.ods_goals || [],
       institution: {
         id: p.institution_id,
-        name: p.institution_name || 'Instituicao',
+        name: p.institution_name || "Instituicao",
         verified: p.institution_verified || false,
         type: p.institution_type,
         pixKey: null,
@@ -91,7 +96,9 @@ export async function GET(request: Request) {
         pixHolderName: null,
       },
       createdAt: p.created_at,
-      progress: p.goal_amount > 0 ? Math.round((Number(p.current_amount) / Number(p.goal_amount)) * 100) : 0,
+      progress: p.goal_amount > 0 
+        ? Math.round((Number(p.current_amount) / Number(p.goal_amount)) * 100) 
+        : 0,
     }))
 
     return NextResponse.json({ projects: formattedProjects })
@@ -105,13 +112,18 @@ export async function GET(request: Request) {
 }
 
 function mapStatus(dbStatus: string | null): string {
-  if (!dbStatus) return 'FUNDING'
+  if (!dbStatus) return "FUNDING"
   const statusMap: Record<string, string> = {
-    'active': 'FUNDING',
-    'funded': 'FUNDED',
-    'executing': 'EXECUTING',
-    'completed': 'COMPLETED',
-    'cancelled': 'CANCELLED',
+    "active": "FUNDING",
+    "ACTIVE": "FUNDING",
+    "funded": "FUNDED",
+    "FUNDED": "FUNDED",
+    "executing": "EXECUTING",
+    "EXECUTING": "EXECUTING",
+    "completed": "COMPLETED",
+    "COMPLETED": "COMPLETED",
+    "cancelled": "CANCELLED",
+    "CANCELLED": "CANCELLED",
   }
-  return statusMap[dbStatus.toLowerCase()] || 'FUNDING'
+  return statusMap[dbStatus] || "FUNDING"
 }
