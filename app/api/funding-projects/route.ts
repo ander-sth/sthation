@@ -1,3 +1,5 @@
+// FUNDING PROJECTS API v5 - TIMESTAMP: 2024-03-06-21-45-30
+// USA p.status::text PARA CONVERTER ENUM PARA TEXTO
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 

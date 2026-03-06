@@ -1,9 +1,11 @@
+// REGISTER API v5 - TIMESTAMP: 2024-03-06-21-45-00
+// ESTA VERSAO USA gen_random_uuid() PARA GERAR ID
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 import { SignJWT } from "jose"
 import bcrypt from "bcryptjs"
 
-const JWT_SECRET = new TextEncoder().encode(
+const JWT_SECRET_REGISTER = new TextEncoder().encode(
   process.env.JWT_SECRET || "sthation-nobis-secret-key-2025"
 )
 
@@ -118,7 +120,7 @@ export async function POST(request: Request) {
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("7d")
-      .sign(JWT_SECRET)
+      .sign(JWT_SECRET_REGISTER)
 
     console.log(`[AUTH] Novo usuario registrado: ${user.email} (${user.role})`)
 
