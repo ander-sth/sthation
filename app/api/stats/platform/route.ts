@@ -1,3 +1,5 @@
+// STATS PLATFORM API v2 - TIMESTAMP: 2024-03-06-22-15-00
+// Usa tabelas e colunas corretas: users.status, organizations (nao institutions)
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
@@ -27,30 +29,62 @@ export async function GET() {
   const sql = neon(process.env.DATABASE_URL)
 
   try {
-    // Query simples - total de usuarios
-    const usersTotal = await sql`SELECT COUNT(*) as total FROM users WHERE is_active = true`
-    const doadores = await sql`SELECT COUNT(*) as total FROM users WHERE role = 'DOADOR' AND is_active = true`
-    const checkers = await sql`SELECT COUNT(*) as total FROM users WHERE role = 'CHECKER' AND is_active = true`
+    // Query usando colunas CORRETAS do schema
+    // users.status (enum) ao inves de is_active
+    // organizations ao inves de institutions
+    // projects e impact_action_cards para projetos
 
-    // Total de projetos
-    const iacTotal = await sql`SELECT COUNT(*) as total FROM impact_action_cards`
-    const iacSocial = await sql`SELECT COUNT(*) as total FROM impact_action_cards WHERE type = 'SOCIAL'`
-    const iacAmbiental = await sql`SELECT COUNT(*) as total FROM impact_action_cards WHERE type = 'AMBIENTAL'`
-    const beneficiarios = await sql`SELECT COALESCE(SUM(estimated_beneficiaries), 0) as total FROM impact_action_cards`
+    const usersTotal = await sql`
+      SELECT COUNT(*) as total FROM users WHERE status = 'ACTIVE'
+    `
+    const doadores = await sql`
+      SELECT COUNT(*) as total FROM users WHERE role = 'DONOR' AND status = 'ACTIVE'
+    `
+    const checkers = await sql`
+      SELECT COUNT(*) as total FROM users WHERE role = 'CHECKER' AND status = 'ACTIVE'
+    `
 
-    // Total de instituicoes
-    const instTotal = await sql`SELECT COUNT(*) as total FROM institutions`
+    // Total de projetos da tabela projects
+    const projectsTotal = await sql`SELECT COUNT(*) as total FROM projects`
+    const projectsActive = await sql`SELECT COUNT(*) as total FROM projects WHERE status::text = 'active'`
+    const projectsCompleted = await sql`SELECT COUNT(*) as total FROM projects WHERE status::text = 'completed'`
+    
+    // Beneficiarios dos projetos
+    const beneficiarios = await sql`
+      SELECT COALESCE(SUM(beneficiaries), 0) as total FROM projects
+    `
+
+    // Total de organizacoes (NAO institutions)
+    const orgsTotal = await sql`SELECT COUNT(*) as total FROM organizations`
+
+    // Total arrecadado e doacoes
+    const doacoesStats = await sql`
+      SELECT 
+        COUNT(*) as total_doacoes,
+        COALESCE(SUM(amount), 0) as total_arrecadado
+      FROM donations
+    `
+
+    // IACs por categoria (social/ambiental baseado em category)
+    const iacSocial = await sql`
+      SELECT COUNT(*) as total FROM impact_action_cards 
+      WHERE LOWER(category) LIKE '%social%'
+    `
+    const iacAmbiental = await sql`
+      SELECT COUNT(*) as total FROM impact_action_cards 
+      WHERE LOWER(category) LIKE '%ambiental%' OR LOWER(category) LIKE '%environment%'
+    `
 
     return NextResponse.json({
       stats: {
-        totalArrecadado: 0,
-        totalDoacoes: 0,
-        totalProjetos: Number(iacTotal[0]?.total || 0),
-        projetosAtivos: Number(iacTotal[0]?.total || 0),
-        projetosConcluidos: 0,
+        totalArrecadado: Number(doacoesStats[0]?.total_arrecadado || 0),
+        totalDoacoes: Number(doacoesStats[0]?.total_doacoes || 0),
+        totalProjetos: Number(projectsTotal[0]?.total || 0),
+        projetosAtivos: Number(projectsActive[0]?.total || 0),
+        projetosConcluidos: Number(projectsCompleted[0]?.total || 0),
         totalBeneficiarios: Number(beneficiarios[0]?.total || 0),
         totalDoadores: Number(doadores[0]?.total || 0),
-        totalInstituicoes: Number(instTotal[0]?.total || 0),
+        totalInstituicoes: Number(orgsTotal[0]?.total || 0),
         totalCheckers: Number(checkers[0]?.total || 0),
         validacoesRealizadas: 0,
         projetosSociais: Number(iacSocial[0]?.total || 0),

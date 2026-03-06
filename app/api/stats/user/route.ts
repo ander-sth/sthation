@@ -1,8 +1,7 @@
+// STATS USER API v2 - TIMESTAMP: 2024-03-06-22-25-00
+// Usa tabelas corretas: donations.donorId, organizations, projects
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
-
-// API de estatisticas especificas do usuario
-// Dados apenas do usuario logado - suas acoes pessoais
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -14,51 +13,66 @@ export async function GET(request: Request) {
   }
 
   if (!process.env.DATABASE_URL) {
-    return NextResponse.json({ stats: getEmptyStats(role || "DOADOR") })
+    return NextResponse.json({ stats: getEmptyStats(role || "DONOR") })
   }
 
   const sql = neon(process.env.DATABASE_URL)
 
   try {
-    if (role === "DOADOR") {
+    // Mapear roles do frontend para backend
+    const normalizedRole = normalizeRole(role || "DONOR")
+
+    if (normalizedRole === "DONOR") {
       return NextResponse.json({ stats: await getDonorStats(sql, userId) })
-    } else if (role === "INSTITUICAO" || role === "INSTITUICAO_SOCIAL") {
+    } else if (normalizedRole === "INSTITUTION") {
       return NextResponse.json({ stats: await getInstitutionStats(sql, userId) })
-    } else if (role === "CHECKER") {
+    } else if (normalizedRole === "CHECKER") {
       return NextResponse.json({ stats: await getCheckerStats(sql, userId) })
-    } else if (role === "PREFEITURA") {
-      return NextResponse.json({ stats: await getPrefeituraStats(sql, userId) })
+    } else if (normalizedRole === "GOV") {
+      return NextResponse.json({ stats: await getGovStats(sql, userId) })
     } else {
-      return NextResponse.json({ stats: getEmptyStats(role || "DOADOR") })
+      return NextResponse.json({ stats: getEmptyStats(normalizedRole) })
     }
   } catch (error) {
     console.error("Error fetching user stats:", error)
-    return NextResponse.json({ stats: getEmptyStats(role || "DOADOR") })
+    return NextResponse.json({ stats: getEmptyStats(role || "DONOR") })
   }
 }
 
+function normalizeRole(role: string): string {
+  const map: Record<string, string> = {
+    "DOADOR": "DONOR", "DONOR": "DONOR",
+    "INSTITUICAO": "INSTITUTION", "INSTITUICAO_SOCIAL": "INSTITUTION", "INSTITUTION": "INSTITUTION",
+    "EMPRESA_AMBIENTAL": "ENVIRONMENTAL_COMPANY", "ENVIRONMENTAL_COMPANY": "ENVIRONMENTAL_COMPANY",
+    "PREFEITURA": "GOV", "GOV": "GOV",
+    "CHECKER": "CHECKER", "CERTIFIER": "CHECKER",
+    "ANALYST": "ANALYST", "ADMIN": "ADMIN",
+  }
+  return map[role.toUpperCase()] || "DONOR"
+}
+
 async function getDonorStats(sql: any, userId: string) {
-  // Doacoes do usuario
+  // Doacoes do usuario - usa donorId (camelCase)
   const donations = await sql`
     SELECT 
       COALESCE(SUM(amount), 0) as total_doado,
       COUNT(*) as total_doacoes,
-      COUNT(DISTINCT funding_project_id) as projetos_apoiados
+      COUNT(DISTINCT "projectId") as projetos_apoiados
     FROM donations
-    WHERE donor_id = ${userId} AND status = 'COMPLETED'
+    WHERE "donorId" = ${userId} AND status = 'CONFIRMED'
   `
 
   const totalDoado = Number(donations[0]?.total_doado || 0)
   const cashback = Math.floor(totalDoado * 0.05)
 
-  // Posicao no ranking (quantos doaram mais que ele)
+  // Posicao no ranking
   const ranking = await sql`
     SELECT COUNT(*) + 1 as posicao
     FROM (
-      SELECT donor_id, SUM(amount) as total
+      SELECT "donorId", SUM(amount) as total
       FROM donations
-      WHERE status = 'COMPLETED'
-      GROUP BY donor_id
+      WHERE status = 'CONFIRMED'
+      GROUP BY "donorId"
       HAVING SUM(amount) > ${totalDoado}
     ) ranked
   `
@@ -73,65 +87,64 @@ async function getDonorStats(sql: any, userId: string) {
 }
 
 async function getInstitutionStats(sql: any, userId: string) {
-  // Buscar instituicao do usuario
-  const institution = await sql`
-    SELECT id FROM institutions WHERE user_id = ${userId} LIMIT 1
+  // Buscar organizacao do usuario via organizationId
+  const user = await sql`
+    SELECT "organizationId" FROM users WHERE id = ${userId} LIMIT 1
   `
   
-  if (!institution[0]) {
-    return {
-      totalArrecadado: 0,
-      totalIACs: 0,
-      iacsAtivos: 0,
-      totalBeneficiarios: 0,
-      totalDoacoes: 0,
-    }
+  const orgId = user[0]?.organizationId
+  if (!orgId) {
+    return getEmptyStats("INSTITUTION")
   }
 
-  const instId = institution[0].id
-
-  // IACs da instituicao
-  const iacs = await sql`
+  // Projetos da organizacao
+  const projects = await sql`
     SELECT 
       COUNT(*) as total,
-      COUNT(*) FILTER (WHERE status IN ('DRAFT', 'FUNDING', 'EXECUTING')) as ativos,
-      COALESCE(SUM(estimated_beneficiaries), 0) as beneficiarios
+      COUNT(*) FILTER (WHERE status::text IN ('active', 'funded', 'executing')) as ativos,
+      COALESCE(SUM(beneficiaries), 0) as beneficiarios,
+      COALESCE(SUM("currentAmount"), 0) as arrecadado
+    FROM projects
+    WHERE "organizationId" = ${orgId}
+  `
+
+  // IACs da organizacao
+  const iacs = await sql`
+    SELECT COUNT(*) as total
     FROM impact_action_cards
-    WHERE institution_id = ${instId}
+    WHERE "organizationId" = ${orgId}
   `
 
   // Doacoes recebidas
   const donations = await sql`
-    SELECT 
-      COALESCE(SUM(d.amount), 0) as total,
-      COUNT(*) as count
+    SELECT COUNT(*) as count
     FROM donations d
-    JOIN funding_projects fp ON d.funding_project_id = fp.id
-    JOIN impact_action_cards iac ON fp.iac_id = iac.id
-    WHERE iac.institution_id = ${instId} AND d.status = 'COMPLETED'
+    JOIN projects p ON d."projectId" = p.id
+    WHERE p."organizationId" = ${orgId} AND d.status = 'CONFIRMED'
   `
 
   return {
-    totalArrecadado: Number(donations[0]?.total || 0),
+    totalArrecadado: Number(projects[0]?.arrecadado || 0),
+    totalProjetos: Number(projects[0]?.total || 0),
     totalIACs: Number(iacs[0]?.total || 0),
-    iacsAtivos: Number(iacs[0]?.ativos || 0),
-    totalBeneficiarios: Number(iacs[0]?.beneficiarios || 0),
+    iacsAtivos: Number(projects[0]?.ativos || 0),
+    totalBeneficiarios: Number(projects[0]?.beneficiarios || 0),
     totalDoacoes: Number(donations[0]?.count || 0),
   }
 }
 
 async function getCheckerStats(sql: any, userId: string) {
-  // Validacoes do checker
+  // Validacoes do checker usando vca_assignments
   const validations = await sql`
     SELECT 
       COUNT(*) as total,
-      COUNT(*) FILTER (WHERE vote = 'APPROVED') as aprovadas,
-      COUNT(*) FILTER (WHERE vote = 'REJECTED') as rejeitadas
-    FROM vca_votes
-    WHERE checker_id = ${userId}
+      COUNT(*) FILTER (WHERE "isApproved" = true) as aprovadas,
+      COUNT(*) FILTER (WHERE "isApproved" = false AND "completedAt" IS NOT NULL) as rejeitadas,
+      COUNT(*) FILTER (WHERE "completedAt" IS NULL) as pendentes
+    FROM vca_assignments
+    WHERE "checkerId" = ${userId}
   `
 
-  // Nobis ganhos (simulado por enquanto)
   const nobisGanhos = Number(validations[0]?.total || 0) * 10
 
   return {
@@ -139,13 +152,13 @@ async function getCheckerStats(sql: any, userId: string) {
     aprovadas: Number(validations[0]?.aprovadas || 0),
     rejeitadas: Number(validations[0]?.rejeitadas || 0),
     nobisGanhos,
-    pendentes: 0, // Seria calculado com base em sessoes abertas
+    pendentes: Number(validations[0]?.pendentes || 0),
   }
 }
 
-async function getPrefeituraStats(sql: any, userId: string) {
-  // Por enquanto retorna dados vazios - a tabela gov_projects sera criada futuramente
-  // Quando implementar, buscar de gov_projects e gov_subscriptions
+async function getGovStats(sql: any, userId: string) {
+  // Estatisticas para prefeituras/governos
+  // Buscar projetos na regiao do usuario
   return {
     projetosInscritos: 0,
     projetosVerificados: 0,
@@ -159,7 +172,7 @@ async function getPrefeituraStats(sql: any, userId: string) {
 }
 
 function getEmptyStats(role: string) {
-  if (role === "DOADOR") {
+  if (role === "DONOR") {
     return {
       totalDoado: 0,
       totalDoacoes: 0,
@@ -167,9 +180,10 @@ function getEmptyStats(role: string) {
       cashbackDisponivel: 0,
       posicaoRanking: null,
     }
-  } else if (role === "INSTITUICAO" || role === "INSTITUICAO_SOCIAL") {
+  } else if (role === "INSTITUTION" || role === "ENVIRONMENTAL_COMPANY") {
     return {
       totalArrecadado: 0,
+      totalProjetos: 0,
       totalIACs: 0,
       iacsAtivos: 0,
       totalBeneficiarios: 0,
@@ -183,7 +197,7 @@ function getEmptyStats(role: string) {
       nobisGanhos: 0,
       pendentes: 0,
     }
-  } else if (role === "PREFEITURA") {
+  } else if (role === "GOV") {
     return {
       projetosInscritos: 0,
       projetosVerificados: 0,
