@@ -34,13 +34,29 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validar role permitido
-    const validRoles = ["DONOR", "DOADOR", "INSTITUICAO", "EMPRESA_AMBIENTAL", "PREFEITURA", "CHECKER", "CERTIFIER", "ADMIN"]
-    const normalizedRole = role === "DONOR" ? "DOADOR" : (role === "CERTIFIER" ? "CHECKER" : role)
+    // Mapear roles do frontend para os valores validos do enum no banco
+    // Enum UserRole: ADMIN, INSTITUTION, DONOR, CHECKER, ANALYST, GOV, ENVIRONMENTAL_COMPANY
+    const roleMapping: Record<string, string> = {
+      "DONOR": "DONOR",
+      "DOADOR": "DONOR",
+      "INSTITUICAO": "INSTITUTION",
+      "INSTITUICAO_SOCIAL": "INSTITUTION",
+      "INSTITUTION": "INSTITUTION",
+      "EMPRESA_AMBIENTAL": "ENVIRONMENTAL_COMPANY",
+      "ENVIRONMENTAL_COMPANY": "ENVIRONMENTAL_COMPANY",
+      "PREFEITURA": "GOV",
+      "GOV": "GOV",
+      "CHECKER": "CHECKER",
+      "CERTIFIER": "CHECKER",
+      "ANALYST": "ANALYST",
+      "ADMIN": "ADMIN",
+    }
     
-    if (!validRoles.includes(role)) {
+    const normalizedRole = roleMapping[role.toUpperCase()]
+    
+    if (!normalizedRole) {
       return NextResponse.json(
-        { error: `Role invalido. Permitidos: ${validRoles.join(", ")}` },
+        { error: `Role invalido: ${role}. Permitidos: DONOR, INSTITUTION, CHECKER, GOV, ENVIRONMENTAL_COMPANY, ANALYST` },
         { status: 400 }
       )
     }
