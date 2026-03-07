@@ -76,9 +76,13 @@ export function HeroSection() {
                     style={{ animationDuration: "15s", animationDirection: "reverse" }}
                   />
                 </div>
-                {/* Diamond/gem icon */}
+                {/* Sthation Logo */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 bg-gradient-to-br from-teal-400 to-cyan-400 transform rotate-45 glow-teal-strong" />
+                  <img 
+                    src="/sthation-icon.png" 
+                    alt="Sthation Logo" 
+                    className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(45,212,191,0.6)]" 
+                  />
                 </div>
               </div>
             </div>
