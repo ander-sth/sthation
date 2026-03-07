@@ -258,14 +258,14 @@ export default function ProjetosPage() {
         </section>
 
         {/* Info bar - explica o fluxo */}
-        <section className={`py-4 ${isSocial ? "bg-rose-500/10 border-y border-rose-500/20" : "bg-emerald-500/10 border-y border-emerald-500/20"}`}>
+        <section className={`py-4 ${isSocial ? "bg-teal-500/10 border-y border-teal-500/20" : "bg-emerald-500/10 border-y border-emerald-500/20"}`}>
           <div className="container mx-auto px-4">
             <div className="flex items-center gap-3 text-sm">
               {isSocial ? (
                 <>
-                  <Shield className="h-5 w-5 text-rose-400 shrink-0" />
+                  <Shield className="h-5 w-5 text-teal-400 shrink-0" />
                   <p className="text-white/80">
-                    <strong className="text-rose-400">Fluxo Social:</strong>{" "}
+                    <strong className="text-teal-400">Fluxo Social:</strong>{" "}
                     {"Projetos recebem doacoes, executam acoes e passam pela checkagem VCA (Verificacao Comunitaria de Autenticidade) com Checkers."}
                   </p>
                 </>
