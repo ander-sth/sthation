@@ -28,6 +28,7 @@ export default function CadastroInstituicaoPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [step, setStep] = useState(1)
+  const [createdAccount, setCreatedAccount] = useState<{email: string, tempPassword: string} | null>(null)
 
   // Dados do formulario
   const [formData, setFormData] = useState({
@@ -72,25 +73,20 @@ export default function CadastroInstituicaoPage() {
   }
 
   const handleSubmit = async () => {
-    if (!token) {
-      toast({
-        title: "Erro",
-        description: "Voce precisa estar logado para cadastrar uma instituicao",
-        variant: "destructive",
-      })
-      router.push("/login")
-      return
-    }
-
     setIsLoading(true)
 
     try {
+      // Se não estiver logado, envia sem token - a API criará a conta automaticamente
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      }
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+
       const res = await fetch("/api/institutions/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
         body: JSON.stringify(formData),
       })
 
@@ -98,9 +94,21 @@ export default function CadastroInstituicaoPage() {
 
       if (res.ok && data.success) {
         setSuccess(true)
+        // Se criou uma nova conta, salvar dados para mostrar ao usuário
+        if (data.user && data.user.tempPassword) {
+          setCreatedAccount({
+            email: data.user.email,
+            tempPassword: data.user.tempPassword,
+          })
+          // Salvar token se foi criado
+          if (data.token) {
+            localStorage.setItem("sthation_token", data.token)
+            localStorage.setItem("sthation_user", JSON.stringify(data.user))
+          }
+        }
         toast({
           title: "Cadastro enviado!",
-          description: "Sua instituicao foi cadastrada e aguarda aprovacao.",
+          description: data.message || "Sua instituição foi cadastrada e aguarda aprovação.",
         })
       } else {
         toast({
@@ -140,9 +148,23 @@ export default function CadastroInstituicaoPage() {
                   Sua instituicao foi cadastrada com sucesso e esta aguardando aprovacao da equipe STHATION.
                 </p>
               </div>
+              {createdAccount && (
+                <div className="bg-teal-500/10 border border-teal-500/20 rounded-lg p-4 text-left">
+                  <p className="text-sm text-teal-400 font-semibold mb-2">Sua conta foi criada!</p>
+                  <p className="text-sm text-white/80 mb-1">
+                    <strong>Email:</strong> {createdAccount.email}
+                  </p>
+                  <p className="text-sm text-white/80">
+                    <strong>Senha temporária:</strong> <code className="bg-white/10 px-2 py-0.5 rounded">{createdAccount.tempPassword}</code>
+                  </p>
+                  <p className="text-xs text-white/50 mt-2">
+                    Guarde estas informações! Use-as para fazer login.
+                  </p>
+                </div>
+              )}
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
                 <p className="text-sm text-amber-400">
-                  Voce recebera um email quando sua instituicao for aprovada. Isso pode levar ate 48 horas uteis.
+                  Você receberá um email quando sua instituição for aprovada. Isso pode levar até 48 horas úteis.
                 </p>
               </div>
               <div className="flex flex-col gap-2">
