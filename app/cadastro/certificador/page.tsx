@@ -147,8 +147,9 @@ export default function CadastroCertificadorPage() {
   }
 
   const canProceedStep1 = formData.name && formData.email && formData.cpf.length >= 14 && formData.password && formData.password === formData.confirmPassword
-  const canProceedStep2 = formData.formation && formData.registrationNumber && formData.registrationBody && formData.specialties.length >= 1
-  const canSubmit = canProceedStep1 && canProceedStep2 && acceptedTerms
+  const canProceedStep2 = formData.formation && formData.registrationNumber && formData.registrationBody
+  const canProceedStep3 = formData.specialties.length >= 1
+  const canSubmit = canProceedStep1 && canProceedStep2 && canProceedStep3 && acceptedTerms
 
   if (success) {
     return (
