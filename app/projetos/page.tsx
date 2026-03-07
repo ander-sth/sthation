@@ -258,13 +258,13 @@ export default function ProjetosPage() {
         </section>
 
         {/* Info bar - explica o fluxo */}
-        <section className={`py-4 ${isSocial ? "bg-teal-500/10 border-y border-teal-500/20" : "bg-emerald-500/10 border-y border-emerald-500/20"}`}>
+        <section className={`py-4 ${isSocial ? "bg-[#0a2a2a] border-y border-teal-500/30" : "bg-[#0a2a2a] border-y border-emerald-500/30"}`}>
           <div className="container mx-auto px-4">
             <div className="flex items-center gap-3 text-sm">
               {isSocial ? (
                 <>
                   <Shield className="h-5 w-5 text-teal-400 shrink-0" />
-                  <p className="text-white/80">
+                  <p className="text-white">
                     <strong className="text-teal-400">Fluxo Social:</strong>{" "}
                     {"Projetos recebem doacoes, executam acoes e passam pela checkagem VCA (Verificacao Comunitaria de Autenticidade) com Checkers."}
                   </p>
@@ -272,7 +272,7 @@ export default function ProjetosPage() {
               ) : (
                 <>
                   <Award className="h-5 w-5 text-emerald-400 shrink-0" />
-                  <p className="text-white/80">
+                  <p className="text-white">
                     <strong className="text-emerald-400">Fluxo Ambiental:</strong>{" "}
                     {"Empresas registram impacto ambiental sem doacoes. Validacao exclusiva por Analistas Certificadores para emissao de creditos e NOBIS."}
                   </p>
