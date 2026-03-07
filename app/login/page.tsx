@@ -71,15 +71,15 @@ export default function LoginPage() {
 
           <div className="w-full max-w-md mx-auto">
             {/* Login Card */}
-            <Card className="bg-white/5 backdrop-blur-sm border-teal-400/20">
-              <CardHeader>
-                <CardTitle className="text-white">Entrar</CardTitle>
-                <CardDescription className="text-white/60">Acesse sua conta na plataforma STHATION</CardDescription>
+            <Card className="bg-white/5 backdrop-blur-sm border-teal-400/20 shadow-xl shadow-teal-900/20">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-white text-2xl font-bold">Entrar</CardTitle>
+                <CardDescription className="text-white/60 text-base">Acesse sua conta na plataforma STHATION</CardDescription>
               </CardHeader>
               <form onSubmit={handleSubmit}>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6 pb-8">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-white/80">
+                    <Label htmlFor="email" className="text-white/80 text-sm font-medium">
                       Email
                     </Label>
                     <Input
@@ -89,11 +89,11 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="bg-white/10 border-teal-400/30 text-white placeholder:text-white/40 focus:border-teal-400"
+                      className="h-12 bg-white/10 border-teal-400/30 text-white placeholder:text-white/40 focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 rounded-lg"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-white/80">
+                    <Label htmlFor="password" className="text-white/80 text-sm font-medium">
                       Senha
                     </Label>
                     <Input
@@ -103,19 +103,19 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="bg-white/10 border-teal-400/30 text-white placeholder:text-white/40 focus:border-teal-400"
+                      className="h-12 bg-white/10 border-teal-400/30 text-white placeholder:text-white/40 focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 rounded-lg"
                     />
                   </div>
                 </CardContent>
-                <CardFooter className="flex flex-col gap-4">
+                <CardFooter className="flex flex-col gap-5 pt-2">
                   <Button
                     type="submit"
-                    className="w-full bg-teal-500 hover:bg-teal-400 text-[#0a2f2f] font-bold rounded-full glow-teal"
+                    className="w-full h-12 bg-teal-500 hover:bg-teal-400 text-[#0a2f2f] font-bold text-base rounded-full glow-teal transition-all duration-200 hover:scale-[1.02]"
                     disabled={isLoading}
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                         Entrando...
                       </>
                     ) : (
@@ -124,7 +124,7 @@ export default function LoginPage() {
                   </Button>
                   <p className="text-center text-sm text-white/60">
                     Nao tem conta?{" "}
-                    <Link href="/cadastro" className="font-medium text-teal-400 hover:text-teal-300">
+                    <Link href="/cadastro" className="font-medium text-teal-400 hover:text-teal-300 transition-colors">
                       Criar conta
                     </Link>
                   </p>
