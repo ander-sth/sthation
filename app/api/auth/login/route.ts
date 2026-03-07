@@ -29,9 +29,8 @@ export async function POST(request: Request) {
     }
 
     // Buscar usuario - usando colunas que existem no schema atual
-    // Schema: id, email, password_hash, passwordHash, name, role, status, etc.
     const users = await sql`
-      SELECT id, email, password_hash, "passwordHash", name, role, status, "createdAt"
+      SELECT id, email, password_hash, name, role, is_verified, is_active
       FROM users
       WHERE email = ${email.toLowerCase()}
     `
@@ -44,9 +43,7 @@ export async function POST(request: Request) {
     }
 
     const user = users[0]
-    
-    // O banco pode ter senha em password_hash ou passwordHash
-    const storedHash = user.password_hash || user.passwordHash
+    const storedHash = user.password_hash
 
     // Verificar senha - primeiro tenta comparacao direta, depois bcrypt
     let passwordMatch = false
@@ -70,8 +67,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Determinar se usuario esta verificado baseado no status
-    const isVerified = user.status === 'active' || user.status === 'ACTIVE'
+    // Determinar se usuario esta verificado
+    const isVerified = user.is_verified === true || user.is_active === true
 
     // Gerar JWT token
     const token = await new SignJWT({
