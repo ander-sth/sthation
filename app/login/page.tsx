@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Info, Shield, Heart, Building2, Factory, Users, Award, ArrowLeft, Landmark } from "lucide-react"
+import { Loader2, ArrowLeft } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
