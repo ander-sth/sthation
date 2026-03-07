@@ -62,26 +62,26 @@ export function HeroSection() {
               <div className="relative w-full aspect-square max-w-lg">
                 {/* Central glowing element */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-64 h-64 rounded-full bg-gradient-to-br from-teal-400/20 to-cyan-400/20 blur-xl animate-pulse" />
+                  <div className="w-80 h-80 rounded-full bg-gradient-to-br from-teal-400/20 to-cyan-400/20 blur-xl animate-pulse" />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div
-                    className="w-48 h-48 rounded-full border-2 border-teal-400/30 animate-spin"
+                    className="w-72 h-72 rounded-full border-2 border-teal-400/30 animate-spin"
                     style={{ animationDuration: "20s" }}
                   />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div
-                    className="w-32 h-32 rounded-full border border-cyan-400/50 animate-spin"
+                    className="w-56 h-56 rounded-full border border-cyan-400/50 animate-spin"
                     style={{ animationDuration: "15s", animationDirection: "reverse" }}
                   />
                 </div>
-                {/* Sthation Logo */}
+                {/* Sthation Logo - Leaf */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   <img 
-                    src="/sthation-icon.png" 
+                    src="/sthation-logo-leaf.png" 
                     alt="Sthation Logo" 
-                    className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(45,212,191,0.6)]" 
+                    className="w-40 h-40 object-contain drop-shadow-[0_0_25px_rgba(45,212,191,0.7)]" 
                   />
                 </div>
               </div>
