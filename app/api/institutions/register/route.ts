@@ -3,8 +3,10 @@ import { NextResponse } from "next/server"
 import { jwtVerify, SignJWT } from "jose"
 import bcrypt from "bcryptjs"
 
-// Usar tabela "organizations" que existe no banco
-// Schema: id, name, type, description, document, logoUrl, website, address, city, state, phone, email, isVerified, createdAt, updatedAt
+// Usar tabela "institutions" que existe no banco
+// Schema: id, name, cnpj, type, description, city, state, address, phone, website, 
+//         responsible_name, responsible_email, responsible_phone, user_id, is_verified, 
+//         created_at, updated_at
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "sthation-nobis-secret-key-2025"
@@ -37,7 +39,8 @@ export async function POST(request: Request) {
     const { 
       name, cnpj, type, description, city, state, address, phone, website,
       responsibleName, responsibleEmail, responsiblePhone,
-      pixKey, pixKeyType, pixHolderName
+      pixKey, pixKeyType, pixHolderName,
+      password // Novo campo para senha definida pelo usuário
     } = body
 
     // Validações
@@ -56,9 +59,9 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verificar se CNPJ/documento já existe
+    // Verificar se CNPJ já existe
     const existingDoc = await sql`
-      SELECT id FROM organizations WHERE document = ${cnpj}
+      SELECT id FROM institutions WHERE cnpj = ${cnpj}
     `
     if (existingDoc.length > 0) {
       return NextResponse.json(
@@ -88,11 +91,24 @@ export async function POST(request: Request) {
     
     if (!userId) {
       // Verificar se tem email do responsável para criar a conta
-      const email = responsibleEmail || `${cnpj.replace(/\D/g, "")}@sthation.temp`
+      if (!responsibleEmail) {
+        return NextResponse.json(
+          { error: "Email do responsável é obrigatório para criar a conta" },
+          { status: 400 }
+        )
+      }
+
+      // Verificar se senha foi fornecida
+      if (!password || password.length < 6) {
+        return NextResponse.json(
+          { error: "Senha é obrigatória e deve ter pelo menos 6 caracteres" },
+          { status: 400 }
+        )
+      }
       
       // Verificar se email já existe
       const existingEmail = await sql`
-        SELECT id FROM users WHERE email = ${email.toLowerCase()}
+        SELECT id FROM users WHERE email = ${responsibleEmail.toLowerCase()}
       `
       if (existingEmail.length > 0) {
         return NextResponse.json(
@@ -101,30 +117,28 @@ export async function POST(request: Request) {
         )
       }
 
-      // Criar senha temporária (últimos 4 dígitos do CNPJ + "Sth!")
-      const cnpjNumbers = cnpj.replace(/\D/g, "")
-      const tempPassword = cnpjNumbers.slice(-4) + "Sth!"
-      const passwordHash = await bcrypt.hash(tempPassword, 12)
+      // Hash da senha fornecida pelo usuário
+      const passwordHash = await bcrypt.hash(password, 12)
 
       // Determinar o role baseado no tipo
       const userRole = getRoleForType(type)
 
       // Criar usuário
       const newUser = await sql`
-        INSERT INTO users (id, email, password_hash, "passwordHash", name, role, phone, status, "createdAt", "updatedAt")
+        INSERT INTO users (id, email, password_hash, name, role, phone, is_verified, is_active, created_at, updated_at)
         VALUES (
           gen_random_uuid(),
-          ${email.toLowerCase()},
-          ${passwordHash},
+          ${responsibleEmail.toLowerCase()},
           ${passwordHash},
           ${responsibleName || name},
-          ${userRole}::"UserRole",
+          ${userRole},
           ${responsiblePhone || phone || null},
-          'ACTIVE'::"UserStatus",
+          false,
+          true,
           NOW(),
           NOW()
         )
-        RETURNING id, email, name, role::text, status::text
+        RETURNING id, email, name, role
       `
 
       userId = newUser[0].id
@@ -133,7 +147,6 @@ export async function POST(request: Request) {
         email: newUser[0].email,
         name: newUser[0].name,
         role: newUser[0].role,
-        tempPassword: tempPassword, // Retornar para o usuário saber a senha
       }
 
       // Gerar token JWT para o novo usuário
@@ -147,14 +160,16 @@ export async function POST(request: Request) {
         .sign(JWT_SECRET)
     }
 
-    // Criar organização (pendente de aprovação)
-    const newOrg = await sql`
-      INSERT INTO organizations (
-        name, document, type, description, city, state, 
-        address, phone, website, email,
-        "isVerified", "createdAt", "updatedAt"
+    // Criar instituição (pendente de aprovação)
+    const newInst = await sql`
+      INSERT INTO institutions (
+        id, name, cnpj, type, description, city, state, 
+        address, phone, website,
+        responsible_name, responsible_email, responsible_phone,
+        user_id, is_verified, created_at, updated_at
       )
       VALUES (
+        gen_random_uuid(),
         ${name},
         ${cnpj},
         ${type.toUpperCase()},
@@ -164,38 +179,32 @@ export async function POST(request: Request) {
         ${address || null},
         ${phone || null},
         ${website || null},
+        ${responsibleName || null},
         ${responsibleEmail || null},
+        ${responsiblePhone || null},
+        ${userId},
         false,
         NOW(),
         NOW()
       )
-      RETURNING id, name, document, type, "isVerified", city, state, "createdAt"
+      RETURNING id, name, cnpj, type, is_verified, city, state, created_at
     `
 
-    const organization = newOrg[0]
+    const institution = newInst[0]
 
-    // Vincular usuário à organização
-    if (userId) {
-      await sql`
-        UPDATE users SET "organizationId" = ${organization.id}, "updatedAt" = NOW()
-        WHERE id = ${userId}
-      `
-    }
-
-    console.log(`[INSTITUTION] Nova organização cadastrada: ${organization.name} (${organization.type}) - Pendente aprovação`)
+    console.log(`[INSTITUTION] Nova instituição cadastrada: ${institution.name} (${institution.type}) - Pendente aprovação`)
 
     const response: any = {
       success: true,
-      message: "Instituição cadastrada com sucesso. Aguardando aprovação do administrador.",
+      message: "Instituição cadastrada com sucesso! Aguardando aprovação do administrador.",
       institution: {
-        id: organization.id,
-        name: organization.name,
-        cnpj: organization.document,
-        document: organization.document,
-        type: organization.type,
-        isVerified: organization.isVerified,
-        city: organization.city,
-        state: organization.state,
+        id: institution.id,
+        name: institution.name,
+        cnpj: institution.cnpj,
+        type: institution.type,
+        isVerified: institution.is_verified,
+        city: institution.city,
+        state: institution.state,
       },
     }
 
@@ -203,7 +212,7 @@ export async function POST(request: Request) {
     if (newUserData && newUserToken) {
       response.user = newUserData
       response.token = newUserToken
-      response.message = `Instituição cadastrada e conta criada! Sua senha temporária é: ${newUserData.tempPassword}. Aguardando aprovação do administrador.`
+      response.message = `Instituição cadastrada e conta criada com sucesso! Aguardando aprovação do administrador.`
     }
 
     return NextResponse.json(response)
@@ -213,7 +222,7 @@ export async function POST(request: Request) {
     }
     console.error("[INSTITUTION] Erro ao cadastrar:", error)
     return NextResponse.json(
-      { error: "Erro interno ao cadastrar instituição" },
+      { error: "Erro interno ao cadastrar instituição: " + (error.message || "Erro desconhecido") },
       { status: 500 }
     )
   }
