@@ -1,110 +1,64 @@
+// NOVA API FUNDING - RECRIADA COMPLETAMENTE
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const status = searchParams.get("status")
-  const category = searchParams.get("category")
-  const limitParam = parseInt(searchParams.get("limit") || "20")
-
-  // Verificar DATABASE_URL
+export async function GET(req: Request) {
   if (!process.env.DATABASE_URL) {
-    console.error("[v0] DATABASE_URL not configured")
     return NextResponse.json({ projects: [] })
   }
 
   const sql = neon(process.env.DATABASE_URL)
+  const params = new URL(req.url).searchParams
+  const limit = parseInt(params.get("limit") || "20")
 
   try {
-    const projects = await sql`
+    // Query simples SEM comparacao de enum - converte status para texto
+    const data = await sql`
       SELECT 
-        fp.id,
-        fp.iac_id,
-        iac.title,
-        iac.description,
-        iac.category,
-        iac.tsb_category_id,
-        fp.status,
-        fp.goal_amount,
-        fp.current_amount,
-        fp.donors_count,
-        fp.deadline,
-        iac.location_name,
-        iac.location_state,
-        iac.vca_score,
-        iac.estimated_beneficiaries,
-        inst.name as institution_name,
-        inst.id as institution_id,
-        inst.is_verified as institution_verified,
-        inst.pix_key,
-        inst.pix_key_type,
-        inst.pix_holder_name,
-        fp.created_at
-      FROM funding_projects fp
-      JOIN impact_action_cards iac ON fp.iac_id = iac.id
-      JOIN institutions inst ON iac.institution_id = inst.id
-      WHERE fp.status != 'CANCELLED'
-      ORDER BY 
-        CASE fp.status 
-          WHEN 'FUNDING' THEN 1 
-          WHEN 'FUNDED' THEN 2 
-          WHEN 'COMPLETED' THEN 3 
-        END,
-        fp.created_at DESC
-      LIMIT ${limitParam}
+        p.id, p.title, p.description, p.category, p.subcategory,
+        p.status::text as st,
+        p."targetAmount" as goal, p."currentAmount" as current,
+        p.beneficiaries, p."endDate" as deadline, p.city, p.state,
+        p."imageUrl", p."odsGoals", p."createdAt",
+        o.id as oid, o.name as oname, o."isVerified" as overified
+      FROM projects p
+      LEFT JOIN organizations o ON p."organizationId" = o.id
+      ORDER BY p."createdAt" DESC
+      LIMIT ${limit}
     `
 
-    // Filtrar no JS para maior flexibilidade
-    let filteredProjects = projects as any[]
+    // Filtrar cancelados em JS
+    const filtered = (data || []).filter((r: any) => {
+      const s = (r.st || "").toLowerCase()
+      return s !== "cancelled" && s !== "canceled"
+    })
 
-    if (status) {
-      filteredProjects = filteredProjects.filter((p) => p.status === status)
-    }
-
-    if (category) {
-      filteredProjects = filteredProjects.filter((p) =>
-        p.category.toLowerCase().includes(category.toLowerCase())
-      )
-    }
-
-    // Transformar para o formato esperado pelo frontend
-    const formattedProjects = filteredProjects.map((p) => ({
-      id: p.id,
-      iacId: p.iac_id,
-      title: p.title,
-      description: p.description,
-      category: p.category,
-      tsbCategoryId: p.tsb_category_id,
-      status: p.status,
-      goalAmount: Number(p.goal_amount),
-      currentAmount: Number(p.current_amount),
-      donorsCount: p.donors_count,
-      deadline: p.deadline,
-      location: {
-        name: p.location_name,
-        state: p.location_state,
-      },
-      vcaScore: p.vca_score ? Number(p.vca_score) : null,
-      estimatedBeneficiaries: p.estimated_beneficiaries,
-      institution: {
-        id: p.institution_id,
-        name: p.institution_name,
-        verified: p.institution_verified,
-        pixKey: p.pix_key,
-        pixKeyType: p.pix_key_type,
-        pixHolderName: p.pix_holder_name,
-      },
-      createdAt: p.created_at,
-      // Calcular progresso
-      progress: p.goal_amount > 0 ? Math.round((Number(p.current_amount) / Number(p.goal_amount)) * 100) : 0,
+    // Mapear para formato esperado
+    const projects = filtered.map((r: any) => ({
+      id: r.id,
+      iacId: r.id,
+      title: r.title,
+      description: r.description,
+      category: r.category,
+      subcategory: r.subcategory,
+      status: r.st === "active" || r.st === "ACTIVE" ? "FUNDING" : (r.st || "FUNDING").toUpperCase(),
+      goalAmount: Number(r.goal) || 0,
+      currentAmount: Number(r.current) || 0,
+      donorsCount: 0,
+      deadline: r.deadline,
+      location: { name: r.city, state: r.state },
+      vcaScore: null,
+      estimatedBeneficiaries: r.beneficiaries,
+      imageUrl: r.imageUrl,
+      odsGoals: r.odsGoals || [],
+      institution: { id: r.oid, name: r.oname || "Instituicao", verified: r.overified || false },
+      createdAt: r.createdAt,
+      progress: r.goal > 0 ? Math.round((Number(r.current) / Number(r.goal)) * 100) : 0,
     }))
 
-    return NextResponse.json({ projects: formattedProjects })
-  } catch (error) {
-    console.error("Error fetching funding projects:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch funding projects" },
-      { status: 500 }
-    )
+    return NextResponse.json({ projects })
+  } catch (e) {
+    console.error("[FUNDING] Erro:", e)
+    return NextResponse.json({ projects: [], error: "Erro ao buscar projetos" }, { status: 500 })
   }
 }

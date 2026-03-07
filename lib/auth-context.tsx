@@ -3,6 +3,27 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { UserRole, ROLE_PERMISSIONS } from "@/lib/types/users"
 
+// Mapear roles do banco (DONOR) para o frontend (DOADOR)
+function mapRoleFromDB(role: string): UserRole {
+  const roleMap: Record<string, UserRole> = {
+    DONOR: UserRole.DOADOR,
+    DOADOR: UserRole.DOADOR,
+    INSTITUTION: UserRole.INSTITUICAO_SOCIAL,
+    INSTITUICAO: UserRole.INSTITUICAO_SOCIAL,
+    INSTITUICAO_SOCIAL: UserRole.INSTITUICAO_SOCIAL,
+    ENVIRONMENTAL_COMPANY: UserRole.EMPRESA_AMBIENTAL,
+    EMPRESA_AMBIENTAL: UserRole.EMPRESA_AMBIENTAL,
+    GOV: UserRole.PREFEITURA,
+    PREFEITURA: UserRole.PREFEITURA,
+    VERIFIER: UserRole.CHECKER,
+    CHECKER: UserRole.CHECKER,
+    VCA: UserRole.CHECKER,
+    ADMIN: UserRole.ADMIN,
+    ANALISTA_CERTIFICADOR: UserRole.ANALISTA_CERTIFICADOR,
+  }
+  return roleMap[role] || UserRole.DOADOR
+}
+
 interface User {
   id: string
   email: string
@@ -50,11 +71,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json()
 
     if (res.ok && data.success) {
+      const mappedRole = mapRoleFromDB(data.user.role)
       const userData = {
         id: data.user.id,
         email: data.user.email,
         name: data.user.name,
-        role: data.user.role as UserRole,
+        role: mappedRole,
         isVerified: data.user.isVerified,
       }
       setUser(userData)
@@ -78,11 +100,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json()
 
     if (res.ok && data.success) {
+      const mappedRole = mapRoleFromDB(data.user.role)
       const userData = {
         id: data.user.id,
         email: data.user.email,
         name: data.user.name,
-        role: data.user.role as UserRole,
+        role: mappedRole,
         isVerified: data.user.isVerified,
       }
       setUser(userData)

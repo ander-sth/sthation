@@ -57,29 +57,21 @@ export function HeroSection() {
               </Button>
             </div>
 
-            {/* Right - Blockchain visualization */}
+            {/* Right - Sthation Logo with Incandescent Glow */}
             <div className="relative hidden lg:flex items-center justify-center">
-              <div className="relative w-full aspect-square max-w-lg">
-                {/* Central glowing element */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-64 h-64 rounded-full bg-gradient-to-br from-teal-400/20 to-cyan-400/20 blur-xl animate-pulse" />
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div
-                    className="w-48 h-48 rounded-full border-2 border-teal-400/30 animate-spin"
-                    style={{ animationDuration: "20s" }}
-                  />
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div
-                    className="w-32 h-32 rounded-full border border-cyan-400/50 animate-spin"
-                    style={{ animationDuration: "15s", animationDirection: "reverse" }}
-                  />
-                </div>
-                {/* Diamond/gem icon */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 bg-gradient-to-br from-teal-400 to-cyan-400 transform rotate-45 glow-teal-strong" />
-                </div>
+              <div className="relative w-full aspect-square max-w-lg flex items-center justify-center">
+                {/* Outer pulsing glow */}
+                <div className="absolute w-[500px] h-[500px] bg-teal-400/20 rounded-full blur-3xl animate-pulse" />
+                {/* Middle intense glow */}
+                <div className="absolute w-96 h-96 bg-teal-400/30 rounded-full blur-2xl animate-pulse" style={{ animationDelay: "0.5s" }} />
+                {/* Inner bright glow */}
+                <div className="absolute w-72 h-72 bg-cyan-400/40 rounded-full blur-xl animate-pulse" style={{ animationDelay: "1s" }} />
+                {/* Sthation Logo - White with strong glow */}
+                <img 
+                  src="/sthation-icon.png" 
+                  alt="Sthation Logo" 
+                  className="w-96 h-96 object-contain drop-shadow-[0_0_60px_rgba(45,212,191,0.8)] relative z-10" 
+                />
               </div>
             </div>
           </div>

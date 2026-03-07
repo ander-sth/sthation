@@ -3,9 +3,12 @@ import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { SignJWT } from "jose"
 
+// JWT Secret - v4 FINAL (sem debug logs)
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "sthation-nobis-secret-key-2025"
 )
+
+// VERSAO CORRIGIDA - sem console.logs de debug
 
 export async function POST(request: Request) {
   if (!process.env.DATABASE_URL) {
@@ -25,9 +28,10 @@ export async function POST(request: Request) {
       )
     }
 
-    // Buscar usuario
+    // Buscar usuario - usando colunas que existem no schema atual
+    // Schema: id, email, password_hash, passwordHash, name, role, status, etc.
     const users = await sql`
-      SELECT id, email, password_hash, name, role, is_verified, created_at
+      SELECT id, email, password_hash, "passwordHash", name, role, status, "createdAt"
       FROM users
       WHERE email = ${email.toLowerCase()}
     `
@@ -40,17 +44,20 @@ export async function POST(request: Request) {
     }
 
     const user = users[0]
+    
+    // O banco pode ter senha em password_hash ou passwordHash
+    const storedHash = user.password_hash || user.passwordHash
 
     // Verificar senha - primeiro tenta comparacao direta, depois bcrypt
     let passwordMatch = false
     
     // Comparacao direta (senha em texto plano)
-    if (password === user.password_hash) {
+    if (password === storedHash) {
       passwordMatch = true
-    } else if (user.password_hash && user.password_hash.startsWith('$2')) {
+    } else if (storedHash && storedHash.startsWith('$2')) {
       // Se comeca com $2, e um hash bcrypt
       try {
-        passwordMatch = await bcrypt.compare(password, user.password_hash)
+        passwordMatch = await bcrypt.compare(password, storedHash)
       } catch {
         passwordMatch = false
       }
@@ -63,12 +70,15 @@ export async function POST(request: Request) {
       )
     }
 
+    // Determinar se usuario esta verificado baseado no status
+    const isVerified = user.status === 'active' || user.status === 'ACTIVE'
+
     // Gerar JWT token
     const token = await new SignJWT({
       userId: user.id,
       email: user.email,
       role: user.role,
-      isVerified: user.is_verified,
+      isVerified: isVerified,
     })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
@@ -85,7 +95,7 @@ export async function POST(request: Request) {
         email: user.email,
         name: user.name,
         role: user.role,
-        isVerified: user.is_verified,
+        isVerified: isVerified,
       },
       token,
     })

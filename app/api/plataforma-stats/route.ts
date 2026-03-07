@@ -1,5 +1,4 @@
-// STATS PLATFORM API v2 - TIMESTAMP: 2024-03-06-22-15-00
-// Usa tabelas e colunas corretas: users.status, organizations (nao institutions)
+// API STATS DA PLATAFORMA - NOVA ROTA
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
@@ -18,6 +17,7 @@ const defaultStats = {
     projetosSociais: 0,
     projetosAmbientais: 0,
     nobisRegistered: 0,
+    totalUsuarios: 0,
   }
 }
 
@@ -29,51 +29,31 @@ export async function GET() {
   const sql = neon(process.env.DATABASE_URL)
 
   try {
-    // Query usando colunas CORRETAS do schema
-    // users.status (enum) ao inves de is_active
-    // organizations ao inves de institutions
-    // projects e impact_action_cards para projetos
+    // Usuarios ativos
+    const usersTotal = await sql`SELECT COUNT(*) as total FROM users WHERE status = 'ACTIVE'`
+    const doadores = await sql`SELECT COUNT(*) as total FROM users WHERE role = 'DONOR' AND status = 'ACTIVE'`
+    const checkers = await sql`SELECT COUNT(*) as total FROM users WHERE role = 'CHECKER' AND status = 'ACTIVE'`
 
-    const usersTotal = await sql`
-      SELECT COUNT(*) as total FROM users WHERE status = 'ACTIVE'
-    `
-    const doadores = await sql`
-      SELECT COUNT(*) as total FROM users WHERE role = 'DONOR' AND status = 'ACTIVE'
-    `
-    const checkers = await sql`
-      SELECT COUNT(*) as total FROM users WHERE role = 'CHECKER' AND status = 'ACTIVE'
-    `
-
-    // Total de projetos da tabela projects
+    // Projetos (usando status::text para evitar erro de enum)
     const projectsTotal = await sql`SELECT COUNT(*) as total FROM projects`
     const projectsActive = await sql`SELECT COUNT(*) as total FROM projects WHERE status::text = 'active'`
     const projectsCompleted = await sql`SELECT COUNT(*) as total FROM projects WHERE status::text = 'completed'`
     
-    // Beneficiarios dos projetos
-    const beneficiarios = await sql`
-      SELECT COALESCE(SUM(beneficiaries), 0) as total FROM projects
-    `
+    // Beneficiarios
+    const beneficiarios = await sql`SELECT COALESCE(SUM(beneficiaries), 0) as total FROM projects`
 
-    // Total de organizacoes (NAO institutions)
+    // Organizacoes (nao institutions)
     const orgsTotal = await sql`SELECT COUNT(*) as total FROM organizations`
 
-    // Total arrecadado e doacoes
+    // Doacoes
     const doacoesStats = await sql`
-      SELECT 
-        COUNT(*) as total_doacoes,
-        COALESCE(SUM(amount), 0) as total_arrecadado
+      SELECT COUNT(*) as total_doacoes, COALESCE(SUM(amount), 0) as total_arrecadado
       FROM donations
     `
 
-    // IACs por categoria (social/ambiental baseado em category)
-    const iacSocial = await sql`
-      SELECT COUNT(*) as total FROM impact_action_cards 
-      WHERE LOWER(category) LIKE '%social%'
-    `
-    const iacAmbiental = await sql`
-      SELECT COUNT(*) as total FROM impact_action_cards 
-      WHERE LOWER(category) LIKE '%ambiental%' OR LOWER(category) LIKE '%environment%'
-    `
+    // IACs por categoria
+    const iacSocial = await sql`SELECT COUNT(*) as total FROM impact_action_cards WHERE LOWER(category) LIKE '%social%'`
+    const iacAmbiental = await sql`SELECT COUNT(*) as total FROM impact_action_cards WHERE LOWER(category) LIKE '%ambiental%'`
 
     return NextResponse.json({
       stats: {
@@ -94,7 +74,7 @@ export async function GET() {
       }
     })
   } catch (error) {
-    console.error("Error fetching platform stats:", error)
+    console.error("[PLATAFORMA-STATS] Erro:", error)
     return NextResponse.json(defaultStats)
   }
 }
