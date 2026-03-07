@@ -6,18 +6,27 @@ import bcrypt from "bcryptjs"
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "sthation-nobis-secret-key-2025")
 
-// Mapear roles para enum UserRole valido
+// Mapear roles para valores validos no banco
+// Valores permitidos: ADMIN, DOADOR, INSTITUICAO, EMPRESA_AMBIENTAL, PREFEITURA, CHECKER, ANALISTA_CERTIFICADOR
 function mapRole(role: string): string {
+  const roleUpper = (role || "").toUpperCase()
   const roleMap: Record<string, string> = {
-    DOADOR: "DONOR", doador: "DONOR", donor: "DONOR", DONOR: "DONOR",
-    INSTITUICAO: "INSTITUTION", instituicao: "INSTITUTION", INSTITUICAO_SOCIAL: "INSTITUTION",
-    EMPRESA_AMBIENTAL: "ENVIRONMENTAL_COMPANY", empresa_ambiental: "ENVIRONMENTAL_COMPANY",
-    PREFEITURA: "GOV", prefeitura: "GOV", GOV: "GOV",
-    VERIFICADOR: "VERIFIER", verificador: "VERIFIER", VERIFIER: "VERIFIER",
-    VCA: "VCA",
+    DOADOR: "DOADOR", 
+    DONOR: "DOADOR",
+    INSTITUICAO: "INSTITUICAO", 
+    INSTITUICAO_SOCIAL: "INSTITUICAO",
+    INSTITUTION: "INSTITUICAO",
+    EMPRESA_AMBIENTAL: "EMPRESA_AMBIENTAL",
+    ENVIRONMENTAL_COMPANY: "EMPRESA_AMBIENTAL",
+    PREFEITURA: "PREFEITURA",
+    GOV: "PREFEITURA",
+    CHECKER: "CHECKER",
+    VERIFICADOR: "CHECKER",
+    ANALISTA_CERTIFICADOR: "ANALISTA_CERTIFICADOR",
+    CERTIFICADOR: "ANALISTA_CERTIFICADOR",
     ADMIN: "ADMIN",
   }
-  return roleMap[role] || "DONOR"
+  return roleMap[roleUpper] || "DOADOR"
 }
 
 export async function POST(req: Request) {
@@ -48,25 +57,23 @@ export async function POST(req: Request) {
     const finalDoc = cpfCnpj || document || null
     const finalPhone = phone || null
 
-    // IMPORTANTE: Usar gen_random_uuid() para gerar ID
-    // E usar casts para enums: ::"UserRole" e ::"UserStatus"
+    // Usar gen_random_uuid() para gerar ID
+    // Schema: id, email, password_hash, name, role, phone, cpf, is_verified, is_active
     const result = await sql`
       INSERT INTO users (
-        id, email, password_hash, "passwordHash", name, role, phone, document, status, "createdAt", "updatedAt"
+        id, email, password_hash, name, role, phone, cpf, is_verified, is_active
       ) VALUES (
         gen_random_uuid(),
         ${email.toLowerCase()},
         ${hash},
-        ${hash},
         ${finalName},
-        ${finalRole}::"UserRole",
+        ${finalRole},
         ${finalPhone},
         ${finalDoc},
-        'ACTIVE'::"UserStatus",
-        NOW(),
-        NOW()
+        false,
+        true
       )
-      RETURNING id, email, name, role::text as role, status::text as status, "createdAt"
+      RETURNING id, email, name, role, is_verified, is_active
     `
 
     if (result.length === 0) {
@@ -94,7 +101,8 @@ export async function POST(req: Request) {
         email: user.email,
         name: user.name,
         role: user.role,
-        isVerified: user.status === "ACTIVE",
+        isVerified: user.is_verified,
+        isActive: user.is_active,
       },
       token,
     }, { status: 201 })
