@@ -57,16 +57,20 @@ export function HeroSection() {
               </Button>
             </div>
 
-            {/* Right - Sthation Logo */}
+            {/* Right - Sthation Logo with Incandescent Glow */}
             <div className="relative hidden lg:flex items-center justify-center">
               <div className="relative w-full aspect-square max-w-lg flex items-center justify-center">
-                {/* Subtle glow behind logo */}
-                <div className="absolute w-96 h-96 bg-teal-400/10 rounded-full blur-3xl" />
-                {/* Sthation Logo - White */}
+                {/* Outer pulsing glow */}
+                <div className="absolute w-[500px] h-[500px] bg-teal-400/20 rounded-full blur-3xl animate-pulse" />
+                {/* Middle intense glow */}
+                <div className="absolute w-96 h-96 bg-teal-400/30 rounded-full blur-2xl animate-pulse" style={{ animationDelay: "0.5s" }} />
+                {/* Inner bright glow */}
+                <div className="absolute w-72 h-72 bg-cyan-400/40 rounded-full blur-xl animate-pulse" style={{ animationDelay: "1s" }} />
+                {/* Sthation Logo - White with strong glow */}
                 <img 
                   src="/sthation-icon.png" 
                   alt="Sthation Logo" 
-                  className="w-80 h-80 object-contain drop-shadow-[0_0_40px_rgba(45,212,191,0.5)] relative z-10" 
+                  className="w-96 h-96 object-contain drop-shadow-[0_0_60px_rgba(45,212,191,0.8)] relative z-10" 
                 />
               </div>
             </div>
