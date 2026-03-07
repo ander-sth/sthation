@@ -13,17 +13,18 @@ const JWT_SECRET = new TextEncoder().encode(
 )
 
 // Mapear tipo de instituição para role do usuário
+// Valores permitidos no banco: ADMIN, DOADOR, INSTITUICAO, EMPRESA_AMBIENTAL, PREFEITURA, CHECKER, ANALISTA_CERTIFICADOR
 function getRoleForType(type: string): string {
   const typeUpper = type.toUpperCase()
   switch (typeUpper) {
     case "SOCIAL":
-      return "INSTITUTION"
+      return "INSTITUICAO"
     case "AMBIENTAL":
-      return "ENVIRONMENTAL_COMPANY"
+      return "EMPRESA_AMBIENTAL"
     case "PREFEITURA":
-      return "GOV"
+      return "PREFEITURA"
     default:
-      return "INSTITUTION"
+      return "INSTITUICAO"
   }
 }
 
