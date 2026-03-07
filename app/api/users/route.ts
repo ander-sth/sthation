@@ -1,9 +1,9 @@
 import { neon } from '@neondatabase/serverless'
 import { NextResponse } from 'next/server'
 
-// Schema users: id, email, password_hash, passwordHash, name, role, status, phone, document, bio, avatarUrl, organizationId, createdAt, updatedAt
-// Enum UserRole: ADMIN, INSTITUTION, DONOR, CHECKER, ANALYST, GOV, ENVIRONMENTAL_COMPANY
-// Enum UserStatus: ACTIVE, INACTIVE, PENDING, SUSPENDED
+// Schema users (real do banco):
+// id, email, password_hash, name, role, is_verified, is_active, phone, document, avatar_url, 
+// checker_level, checker_score, validations_count, wallet_address, metadata, created_at, updated_at
 
 export async function GET(request: Request) {
   if (!process.env.DATABASE_URL) {
@@ -13,16 +13,19 @@ export async function GET(request: Request) {
   const sql = neon(process.env.DATABASE_URL)
   const { searchParams } = new URL(request.url)
   const email = searchParams.get('email')
+  const role = searchParams.get('role')
+  const limit = parseInt(searchParams.get('limit') || '100')
 
   try {
     if (email) {
       // Buscar usuario por email
       const users = await sql`
         SELECT 
-          id, email, name, role, status, phone, document, bio,
-          "avatarUrl", "organizationId", "createdAt"
+          id, email, name, role, is_verified, is_active, phone, document,
+          avatar_url, checker_level, checker_score, validations_count,
+          wallet_address, created_at, updated_at
         FROM users
-        WHERE email = ${email} AND status = 'ACTIVE'
+        WHERE email = ${email}
       `
 
       if (!users || users.length === 0) {
@@ -35,34 +38,71 @@ export async function GET(request: Request) {
       const user = users[0]
       return NextResponse.json({ 
         user: {
-          ...user,
-          isVerified: user.status === 'ACTIVE',
-          isActive: user.status === 'ACTIVE',
-          avatarUrl: user.avatarUrl,
-          createdAt: user.createdAt,
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          isVerified: user.is_verified,
+          isActive: user.is_active,
+          phone: user.phone,
+          document: user.document,
+          avatarUrl: user.avatar_url,
+          checkerLevel: user.checker_level,
+          checkerScore: user.checker_score,
+          validationsCount: user.validations_count,
+          walletAddress: user.wallet_address,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at,
         }
       })
     }
 
     // Listar todos usuarios para admin
-    const users = await sql`
-      SELECT 
-        id, email, name, role, status, phone, document,
-        "avatarUrl", "organizationId", "createdAt", "updatedAt"
-      FROM users
-      ORDER BY "createdAt" DESC
-    `
+    let users
+    if (role) {
+      users = await sql`
+        SELECT 
+          id, email, name, role, is_verified, is_active, phone, document,
+          avatar_url, checker_level, checker_score, validations_count,
+          wallet_address, created_at, updated_at
+        FROM users
+        WHERE role = ${role}
+        ORDER BY created_at DESC
+        LIMIT ${limit}
+      `
+    } else {
+      users = await sql`
+        SELECT 
+          id, email, name, role, is_verified, is_active, phone, document,
+          avatar_url, checker_level, checker_score, validations_count,
+          wallet_address, created_at, updated_at
+        FROM users
+        ORDER BY created_at DESC
+        LIMIT ${limit}
+      `
+    }
 
     const formattedUsers = (users || []).map((u: any) => ({
-      ...u,
-      isVerified: u.status === 'ACTIVE',
-      isActive: u.status === 'ACTIVE',
-      avatarUrl: u.avatarUrl,
-      createdAt: u.createdAt,
-      updatedAt: u.updatedAt,
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      role: u.role,
+      isVerified: u.is_verified,
+      isActive: u.is_active,
+      is_verified: u.is_verified,
+      is_active: u.is_active,
+      phone: u.phone,
+      document: u.document,
+      avatarUrl: u.avatar_url,
+      checkerLevel: u.checker_level,
+      checkerScore: u.checker_score,
+      validationsCount: u.validations_count,
+      walletAddress: u.wallet_address,
+      createdAt: u.created_at,
+      updatedAt: u.updated_at,
     }))
 
-    return NextResponse.json({ users: formattedUsers })
+    return NextResponse.json({ users: formattedUsers, total: formattedUsers.length })
   } catch (error) {
     console.error('Error fetching users:', error)
     return NextResponse.json(

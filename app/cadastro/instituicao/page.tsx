@@ -28,6 +28,7 @@ export default function CadastroInstituicaoPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [step, setStep] = useState(1)
+  const [createdAccount, setCreatedAccount] = useState<{email: string, tempPassword: string} | null>(null)
 
   // Dados do formulario
   const [formData, setFormData] = useState({
@@ -43,6 +44,9 @@ export default function CadastroInstituicaoPage() {
     responsibleName: "",
     responsibleEmail: "",
     responsiblePhone: "",
+    // Dados de acesso (senha)
+    password: "",
+    confirmPassword: "",
     // Dados PIX
     pixKey: "",
     pixKeyType: "",
@@ -72,25 +76,20 @@ export default function CadastroInstituicaoPage() {
   }
 
   const handleSubmit = async () => {
-    if (!token) {
-      toast({
-        title: "Erro",
-        description: "Voce precisa estar logado para cadastrar uma instituicao",
-        variant: "destructive",
-      })
-      router.push("/login")
-      return
-    }
-
     setIsLoading(true)
 
     try {
+      // Se não estiver logado, envia sem token - a API criará a conta automaticamente
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      }
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+
       const res = await fetch("/api/institutions/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
         body: JSON.stringify(formData),
       })
 
@@ -98,9 +97,21 @@ export default function CadastroInstituicaoPage() {
 
       if (res.ok && data.success) {
         setSuccess(true)
+        // Se criou uma nova conta, salvar dados para mostrar ao usuário
+        if (data.user && data.user.tempPassword) {
+          setCreatedAccount({
+            email: data.user.email,
+            tempPassword: data.user.tempPassword,
+          })
+          // Salvar token se foi criado
+          if (data.token) {
+            localStorage.setItem("sthation_token", data.token)
+            localStorage.setItem("sthation_user", JSON.stringify(data.user))
+          }
+        }
         toast({
           title: "Cadastro enviado!",
-          description: "Sua instituicao foi cadastrada e aguarda aprovacao.",
+          description: data.message || "Sua instituição foi cadastrada e aguarda aprovação.",
         })
       } else {
         toast({
@@ -122,7 +133,10 @@ export default function CadastroInstituicaoPage() {
 
   const canProceedStep1 = formData.name && formData.cnpj.length >= 14 && formData.type && formData.description
   const canProceedStep2 = formData.city && formData.state
-  const canSubmit = canProceedStep1 && canProceedStep2
+  const canProceedStep3 = formData.responsibleName && formData.responsibleEmail && 
+    formData.password && formData.password.length >= 6 && 
+    formData.password === formData.confirmPassword
+  const canSubmit = canProceedStep1 && canProceedStep2 && canProceedStep3
 
   if (success) {
     return (
@@ -140,9 +154,20 @@ export default function CadastroInstituicaoPage() {
                   Sua instituicao foi cadastrada com sucesso e esta aguardando aprovacao da equipe STHATION.
                 </p>
               </div>
+              {createdAccount && (
+                <div className="bg-teal-500/10 border border-teal-500/20 rounded-lg p-4 text-left">
+                  <p className="text-sm text-teal-400 font-semibold mb-2">Sua conta foi criada!</p>
+                  <p className="text-sm text-white/80 mb-1">
+                    <strong>Email:</strong> {createdAccount.email}
+                  </p>
+                  <p className="text-xs text-white/50 mt-2">
+                    Use o email e a senha que você cadastrou para fazer login.
+                  </p>
+                </div>
+              )}
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
                 <p className="text-sm text-amber-400">
-                  Voce recebera um email quando sua instituicao for aprovada. Isso pode levar ate 48 horas uteis.
+                  Você receberá um email quando sua instituição for aprovada. Isso pode levar até 48 horas úteis.
                 </p>
               </div>
               <div className="flex flex-col gap-2">
@@ -336,17 +361,17 @@ export default function CadastroInstituicaoPage() {
                 </>
               )}
 
-              {/* Step 3: Responsavel */}
+              {/* Step 3: Responsavel e Acesso */}
               {step === 3 && (
                 <>
                   <div className="bg-white/5 rounded-lg p-4 mb-4">
                     <p className="text-sm text-white/60">
-                      O responsavel sera o contato principal da instituicao na plataforma STHATION.
+                      O responsável será o contato principal da instituição e terá acesso à plataforma STHATION.
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="responsibleName" className="text-white">Nome do Responsavel</Label>
+                    <Label htmlFor="responsibleName" className="text-white">Nome do Responsável *</Label>
                     <Input
                       id="responsibleName"
                       value={formData.responsibleName}
@@ -357,7 +382,7 @@ export default function CadastroInstituicaoPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="responsibleEmail" className="text-white">Email do Responsavel</Label>
+                    <Label htmlFor="responsibleEmail" className="text-white">Email do Responsável *</Label>
                     <Input
                       id="responsibleEmail"
                       type="email"
@@ -366,10 +391,11 @@ export default function CadastroInstituicaoPage() {
                       placeholder="email@instituicao.org"
                       className="bg-white/5 border-white/20 text-white placeholder:text-white/40"
                     />
+                    <p className="text-xs text-white/40">Este será o email de login na plataforma</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="responsiblePhone" className="text-white">Telefone do Responsavel</Label>
+                    <Label htmlFor="responsiblePhone" className="text-white">Telefone do Responsável</Label>
                     <Input
                       id="responsiblePhone"
                       value={formData.responsiblePhone}
@@ -377,6 +403,39 @@ export default function CadastroInstituicaoPage() {
                       placeholder="(11) 99999-9999"
                       className="bg-white/5 border-white/20 text-white placeholder:text-white/40"
                     />
+                  </div>
+
+                  <div className="border-t border-white/10 pt-6 mt-6">
+                    <h4 className="text-white font-medium mb-4">Criar senha de acesso</h4>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="password" className="text-white">Senha *</Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          value={formData.password}
+                          onChange={(e) => updateField("password", e.target.value)}
+                          placeholder="Mínimo 6 caracteres"
+                          className="bg-white/5 border-white/20 text-white placeholder:text-white/40"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="confirmPassword" className="text-white">Confirmar Senha *</Label>
+                        <Input
+                          id="confirmPassword"
+                          type="password"
+                          value={formData.confirmPassword}
+                          onChange={(e) => updateField("confirmPassword", e.target.value)}
+                          placeholder="Digite a senha novamente"
+                          className="bg-white/5 border-white/20 text-white placeholder:text-white/40"
+                        />
+                        {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                          <p className="text-xs text-red-400">As senhas não coincidem</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </>
               )}

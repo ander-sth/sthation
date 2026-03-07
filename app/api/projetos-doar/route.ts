@@ -1,6 +1,11 @@
-// API PARA LISTAR PROJETOS PARA DOACAO - NOVA ROTA
+// API PARA LISTAR PROJETOS PARA DOACAO - USANDO SCHEMA REAL
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
+
+// Schema real:
+// funding_projects: id, title, description, status, goal_amount, current_amount, donors_count, deadline, iac_id
+// impact_action_cards: id, title, description, category, type, institution_id, location_name, location_state, estimated_beneficiaries
+// institutions: id, name, cnpj, type, is_verified
 
 export async function GET(req: Request) {
   if (!process.env.DATABASE_URL) {
@@ -12,55 +17,50 @@ export async function GET(req: Request) {
   const limit = parseInt(params.get("limit") || "20")
 
   try {
-    // Query simples - converte enum para texto
+    // Query usando tabelas reais do banco
     const data = await sql`
       SELECT 
-        p.id, p.title, p.description, p.category, p.subcategory,
-        p.status::text as status_text,
-        p."targetAmount", p."currentAmount",
-        p.beneficiaries, p."endDate", p.city, p.state,
-        p."imageUrl", p."odsGoals", p."createdAt",
-        o.id as org_id, o.name as org_name, o."isVerified" as org_verified
-      FROM projects p
-      LEFT JOIN organizations o ON p."organizationId" = o.id
-      ORDER BY p."createdAt" DESC
+        fp.id, fp.title, fp.description, fp.status,
+        fp.goal_amount, fp.current_amount, fp.donors_count, fp.deadline,
+        fp.iac_id, fp.created_at,
+        iac.category, iac.type as iac_type, iac.location_name, iac.location_state,
+        iac.estimated_beneficiaries,
+        i.id as inst_id, i.name as inst_name, i.is_verified as inst_verified
+      FROM funding_projects fp
+      LEFT JOIN impact_action_cards iac ON fp.iac_id = iac.id
+      LEFT JOIN institutions i ON iac.institution_id = i.id
+      WHERE fp.status = 'FUNDING'
+      ORDER BY fp.created_at DESC
       LIMIT ${limit}
     `
 
-    // Filtrar cancelados em JavaScript
-    const filtered = (data || []).filter((r: any) => {
-      const s = (r.status_text || "").toLowerCase()
-      return s !== "cancelled" && s !== "canceled"
-    })
-
     // Mapear para formato esperado pelo frontend
-    const projects = filtered.map((r: any) => ({
+    const projects = (data || []).map((r: any) => ({
       id: r.id,
       title: r.title,
       description: r.description,
-      category: r.category,
-      subcategory: r.subcategory,
-      status: (r.status_text || "active").toUpperCase() === "ACTIVE" ? "FUNDING" : (r.status_text || "FUNDING").toUpperCase(),
-      goal_amount: Number(r.targetAmount) || 0,
-      goalAmount: Number(r.targetAmount) || 0,
-      current_amount: Number(r.currentAmount) || 0,
-      currentAmount: Number(r.currentAmount) || 0,
-      raised: Number(r.currentAmount) || 0,
-      goal: Number(r.targetAmount) || 0,
-      deadline: r.endDate,
-      location_name: r.city,
-      location_state: r.state,
-      imageUrl: r.imageUrl,
-      odsGoals: r.odsGoals || [],
-      beneficiaries: r.beneficiaries || 0,
-      institution_name: r.org_name || "Instituicao",
+      category: r.category || 'social',
+      status: r.status || 'FUNDING',
+      goal_amount: Number(r.goal_amount) || 0,
+      goalAmount: Number(r.goal_amount) || 0,
+      current_amount: Number(r.current_amount) || 0,
+      currentAmount: Number(r.current_amount) || 0,
+      raised: Number(r.current_amount) || 0,
+      goal: Number(r.goal_amount) || 0,
+      deadline: r.deadline,
+      donors_count: r.donors_count || 0,
+      donorsCount: r.donors_count || 0,
+      location_name: r.location_name,
+      location_state: r.location_state,
+      beneficiaries: r.estimated_beneficiaries || 0,
+      institution_name: r.inst_name || "Instituicao",
       institution: {
-        id: r.org_id,
-        name: r.org_name || "Instituicao",
-        verified: r.org_verified || false,
+        id: r.inst_id,
+        name: r.inst_name || "Instituicao",
+        verified: r.inst_verified || false,
       },
-      createdAt: r.createdAt,
-      progress: r.targetAmount > 0 ? Math.round((Number(r.currentAmount) / Number(r.targetAmount)) * 100) : 0,
+      createdAt: r.created_at,
+      progress: r.goal_amount > 0 ? Math.round((Number(r.current_amount) / Number(r.goal_amount)) * 100) : 0,
     }))
 
     return NextResponse.json({ projects })

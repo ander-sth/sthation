@@ -1,6 +1,10 @@
-// NOVA API IMPACT RECORDS - USA organizations (NAO institutions)
+// API IMPACT RECORDS - USANDO SCHEMA REAL
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
+
+// Schema real:
+// impact_action_cards: id, title, description, category, type, status, institution_id, location_name, location_state, estimated_beneficiaries, budget
+// institutions: id, name, cnpj, type, is_verified
 
 export async function GET(req: Request) {
   if (!process.env.DATABASE_URL) {
@@ -12,17 +16,18 @@ export async function GET(req: Request) {
   const limit = parseInt(params.get("limit") || "20")
 
   try {
-    // Buscar impact_action_cards com organizations (NAO institutions)
+    // Buscar impact_action_cards com institutions (tabela correta)
     const data = await sql`
       SELECT 
-        iac.id, iac.title, iac.description, iac.category,
-        iac.status::text as st, iac.beneficiaries, iac.budget,
-        iac.city, iac.state, iac."imageUrl", iac."odsGoals",
-        iac."createdAt", iac."verificationCode",
-        o.id as oid, o.name as oname, o."isVerified" as overified
+        iac.id, iac.title, iac.description, iac.category, iac.type,
+        iac.status, iac.estimated_beneficiaries, iac.budget,
+        iac.location_name, iac.location_state, iac.vca_score,
+        iac.polygon_tx_hash, iac.inscription_id, iac.trail_id,
+        iac.created_at,
+        i.id as inst_id, i.name as inst_name, i.is_verified as inst_verified
       FROM impact_action_cards iac
-      LEFT JOIN organizations o ON iac."organizationId" = o.id
-      ORDER BY iac."createdAt" DESC
+      LEFT JOIN institutions i ON iac.institution_id = i.id
+      ORDER BY iac.created_at DESC
       LIMIT ${limit}
     `
 
@@ -31,15 +36,25 @@ export async function GET(req: Request) {
       title: r.title,
       description: r.description,
       category: r.category,
-      status: r.st || "draft",
-      beneficiaries: r.beneficiaries || 0,
+      type: r.type || 'SOCIAL',
+      status: r.status || "DRAFT",
+      beneficiaries: r.estimated_beneficiaries || 0,
+      estimatedBeneficiaries: r.estimated_beneficiaries || 0,
       budget: Number(r.budget) || 0,
-      location: { name: r.city, state: r.state },
-      imageUrl: r.imageUrl,
-      odsGoals: r.odsGoals || [],
-      verificationCode: r.verificationCode,
-      institution: { id: r.oid, name: r.oname || "Organizacao", verified: r.overified || false },
-      createdAt: r.createdAt,
+      location: { name: r.location_name, state: r.location_state },
+      location_name: r.location_name,
+      location_state: r.location_state,
+      vcaScore: r.vca_score,
+      polygonTxHash: r.polygon_tx_hash,
+      inscriptionId: r.inscription_id,
+      trailId: r.trail_id,
+      institution: { 
+        id: r.inst_id, 
+        name: r.inst_name || "Instituicao", 
+        verified: r.inst_verified || false 
+      },
+      institution_name: r.inst_name,
+      createdAt: r.created_at,
     }))
 
     return NextResponse.json({ impactRecords: records })

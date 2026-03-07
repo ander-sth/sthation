@@ -91,50 +91,13 @@ export default function DashboardPage() {
         )}
 
         {/* Checker */}
-        {user.role === UserRole.CHECKER && (
-          <>
-            <StatCard title="Validações Pendentes" value="3" description="Aguardando seu voto" icon={Vote} highlight />
-            <StatCard title="Validações Realizadas" value="47" description="Este mês" icon={CheckCircle2} />
-            <StatCard
-              title="Score de Reputação"
-              value={`${user.checkerScore || 0}`}
-              description="Média da comunidade: 78"
-              icon={Award}
-            />
-            <StatCard title="Tokens Recebidos" value="R$ 1.880" description="Do Fundo de Validação" icon={DollarSign} />
-          </>
-        )}
+        {user.role === UserRole.CHECKER && <CheckerStats userId={user.id} checkerScore={user.checkerScore} />}
 
         {/* Analista Certificador - APENAS projetos ambientais, sem VCA */}
-        {user.role === UserRole.ANALISTA_CERTIFICADOR && (
-          <>
-            <StatCard title="Certificacoes Pendentes" value="3" description="Projetos ambientais aguardando analise" icon={Clock} highlight />
-            <StatCard title="Certificacoes Concluidas" value="34" description="Este mes" icon={CheckCircle2} />
-            <StatCard title="Impacto Verificado" value="5.420 tCO2e" description="Total certificado" icon={Leaf} />
-            <StatCard
-              title="Credenciais Ativas"
-              value={`${user.certifications?.length || 0}`}
-              description="Certificacoes profissionais"
-              icon={Award}
-            />
-          </>
-        )}
+        {user.role === UserRole.ANALISTA_CERTIFICADOR && <AnalistaCertificadorStats userId={user.id} certifications={user.certifications} />}
 
         {/* Admin */}
-        {user.role === UserRole.ADMIN && (
-          <>
-            <StatCard
-              title="Total Arrecadado"
-              value="R$ 2.4M"
-              description="+32% vs mês anterior"
-              icon={TrendingUp}
-              trend="up"
-            />
-            <StatCard title="Usuários Ativos" value="1.847" description="142 novos esta semana" icon={Users} />
-            <StatCard title="IACs em Validação" value="23" description="Aguardando VCA" icon={Vote} />
-            <StatCard title="Inscriptions Pendentes" value="3" description="Aguardando registro" icon={Stamp} />
-          </>
-        )}
+        {user.role === UserRole.ADMIN && <AdminStats />}
 
         {/* Prefeitura (Gov) - Plano on-demand, projetos sociais e ambientais */}
         {user.role === UserRole.PREFEITURA && <PrefeituraStats userId={user.id} />}
@@ -1111,5 +1074,139 @@ function GovQuickActions() {
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+// Stats do Admin com dados reais
+function AdminStats() {
+  const { data, isLoading } = useApiData<any>("/api/plataforma-stats", {})
+  const stats = data?.stats || {}
+
+  if (isLoading) {
+    return (
+      <>
+        <StatCard title="Total Arrecadado" value="..." description="Carregando..." icon={TrendingUp} />
+        <StatCard title="Usuários Ativos" value="..." description="Carregando..." icon={Users} />
+        <StatCard title="IACs em Validação" value="..." description="Carregando..." icon={Vote} />
+        <StatCard title="Inscriptions Pendentes" value="..." description="Carregando..." icon={Stamp} />
+      </>
+    )
+  }
+
+  const totalArrecadado = stats.totalArrecadado || 0
+  const formatCurrency = (value: number) => {
+    if (value >= 1000000) return `R$ ${(value / 1000000).toFixed(1)}M`
+    if (value >= 1000) return `R$ ${(value / 1000).toFixed(1)}K`
+    return `R$ ${value.toLocaleString("pt-BR")}`
+  }
+
+  return (
+    <>
+      <StatCard
+        title="Total Arrecadado"
+        value={formatCurrency(totalArrecadado)}
+        description="Total em doações"
+        icon={TrendingUp}
+        trend={totalArrecadado > 0 ? "up" : undefined}
+      />
+      <StatCard 
+        title="Usuários Ativos" 
+        value={`${stats.totalUsuarios || 0}`} 
+        description={`${stats.totalDoadores || 0} doadores`} 
+        icon={Users} 
+      />
+      <StatCard 
+        title="IACs Cadastrados" 
+        value={`${stats.projetosSociais + stats.projetosAmbientais || 0}`} 
+        description={`${stats.projetosSociais || 0} sociais, ${stats.projetosAmbientais || 0} ambientais`} 
+        icon={Vote} 
+      />
+      <StatCard 
+        title="NOBIS Registrados" 
+        value={`${stats.nobisRegistered || 0}`} 
+        description="Na blockchain" 
+        icon={Stamp} 
+      />
+    </>
+  )
+}
+
+// Stats do Checker com dados reais
+function CheckerStats({ userId, checkerScore }: { userId: string; checkerScore?: number }) {
+  const { data: pendingData } = useApiData<any>("/api/vca/pending", {})
+  const { data: historyData } = useApiData<any>(`/api/vca/history?user_id=${userId}`, {})
+  
+  const pendingCount = pendingData?.rounds?.length || 0
+  const completedCount = historyData?.votes?.length || 0
+  const tokensEarned = historyData?.totalTokens || 0
+
+  return (
+    <>
+      <StatCard 
+        title="Validações Pendentes" 
+        value={`${pendingCount}`} 
+        description="Aguardando seu voto" 
+        icon={Vote} 
+        highlight 
+      />
+      <StatCard 
+        title="Validações Realizadas" 
+        value={`${completedCount}`} 
+        description="Total" 
+        icon={CheckCircle2} 
+      />
+      <StatCard
+        title="Score de Reputação"
+        value={`${checkerScore || 0}`}
+        description="Baseado em suas validações"
+        icon={Award}
+      />
+      <StatCard 
+        title="Tokens Recebidos" 
+        value={`R$ ${tokensEarned.toLocaleString("pt-BR")}`} 
+        description="Do Fundo de Validação" 
+        icon={DollarSign} 
+      />
+    </>
+  )
+}
+
+// Stats do Analista Certificador com dados reais
+function AnalistaCertificadorStats({ userId, certifications }: { userId: string; certifications?: string[] }) {
+  const { data: pendingData } = useApiData<any>("/api/iac?type=AMBIENTAL&status=SUBMITTED", {})
+  const { data: completedData } = useApiData<any>(`/api/certifications/history?analyst_id=${userId}`, {})
+  
+  const pendingCount = pendingData?.projects?.length || 0
+  const completedCount = completedData?.certifications?.length || 0
+  const totalImpact = completedData?.totalImpact || 0
+
+  return (
+    <>
+      <StatCard 
+        title="Certificações Pendentes" 
+        value={`${pendingCount}`} 
+        description="Projetos ambientais aguardando análise" 
+        icon={Clock} 
+        highlight 
+      />
+      <StatCard 
+        title="Certificações Concluídas" 
+        value={`${completedCount}`} 
+        description="Total" 
+        icon={CheckCircle2} 
+      />
+      <StatCard 
+        title="Impacto Verificado" 
+        value={totalImpact > 0 ? `${totalImpact.toLocaleString()} tCO2e` : "0 tCO2e"} 
+        description="Total certificado" 
+        icon={Leaf} 
+      />
+      <StatCard
+        title="Credenciais Ativas"
+        value={`${certifications?.length || 0}`}
+        description="Certificações profissionais"
+        icon={Award}
+      />
+    </>
   )
 }

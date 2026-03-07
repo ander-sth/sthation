@@ -2,7 +2,9 @@ import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 import { jwtVerify } from "jose"
 
-// Usar tabela organizations em vez de institutions
+// Schema real:
+// institutions: id, name, cnpj, type, description, city, state, user_id, is_verified, verified_at, rejection_reason
+// users: id, email, name, role, is_verified, is_active
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "sthation-nobis-secret-key-2025"
@@ -36,7 +38,7 @@ async function verifyAdmin(request: Request) {
   }
 }
 
-// GET - Listar organizacoes (com filtro de pendentes)
+// GET - Listar instituicoes (com filtro de pendentes)
 export async function GET(request: Request) {
   const adminCheck = await verifyAdmin(request)
   if ("error" in adminCheck) {
@@ -49,50 +51,60 @@ export async function GET(request: Request) {
   const type = searchParams.get("type")
 
   let results
-  if (status === "pending") {
+  if (status === "pending" || status === "PENDING") {
     results = await sql`
-      SELECT o.*, u.email as user_email, u.name as user_name
-      FROM organizations o
-      LEFT JOIN users u ON u."organizationId" = o.id
-      WHERE o."isVerified" = false
-      ORDER BY o."createdAt" DESC
+      SELECT i.*, u.email as user_email, u.name as user_name
+      FROM institutions i
+      LEFT JOIN users u ON i.user_id = u.id
+      WHERE i.is_verified = false OR i.is_verified IS NULL
+      ORDER BY i.created_at DESC
     `
-  } else if (status === "verified") {
+  } else if (status === "verified" || status === "APPROVED") {
     results = await sql`
-      SELECT o.*, u.email as user_email, u.name as user_name
-      FROM organizations o
-      LEFT JOIN users u ON u."organizationId" = o.id
-      WHERE o."isVerified" = true
-      ORDER BY o."createdAt" DESC
+      SELECT i.*, u.email as user_email, u.name as user_name
+      FROM institutions i
+      LEFT JOIN users u ON i.user_id = u.id
+      WHERE i.is_verified = true
+      ORDER BY i.created_at DESC
     `
   } else {
     results = await sql`
-      SELECT o.*, u.email as user_email, u.name as user_name
-      FROM organizations o
-      LEFT JOIN users u ON u."organizationId" = o.id
-      ORDER BY o."isVerified" ASC, o."createdAt" DESC
+      SELECT i.*, u.email as user_email, u.name as user_name
+      FROM institutions i
+      LEFT JOIN users u ON i.user_id = u.id
+      ORDER BY i.is_verified ASC, i.created_at DESC
     `
   }
 
-  // Filtrar por tipo se especificado
+  // Mapear para formato do frontend
   let institutions = (results || []).map((r: any) => ({
     id: r.id,
     name: r.name,
-    cnpj: r.document,
-    document: r.document,
+    cnpj: r.cnpj,
+    document: r.cnpj,
     type: r.type,
     description: r.description,
-    isVerified: r.isVerified,
+    isVerified: r.is_verified,
+    verifiedAt: r.verified_at,
+    rejectionReason: r.rejection_reason,
     city: r.city,
     state: r.state,
+    phone: r.phone,
+    website: r.website,
+    responsibleName: r.responsible_name,
+    responsibleEmail: r.responsible_email,
+    responsiblePhone: r.responsible_phone,
+    userId: r.user_id,
     userEmail: r.user_email,
     userName: r.user_name,
-    createdAt: r.createdAt,
+    createdAt: r.created_at,
+    status: r.is_verified ? 'APPROVED' : 'PENDING',
   }))
 
+  // Filtrar por tipo se especificado
   if (type) {
     institutions = institutions.filter((i: any) => 
-      i.type?.toLowerCase() === type.toLowerCase()
+      i.type?.toUpperCase() === type.toUpperCase()
     )
   }
 
@@ -102,7 +114,7 @@ export async function GET(request: Request) {
   })
 }
 
-// PATCH - Aprovar ou rejeitar organizacao
+// PATCH - Aprovar ou rejeitar instituicao
 export async function PATCH(request: Request) {
   const adminCheck = await verifyAdmin(request)
   if ("error" in adminCheck) {
@@ -111,13 +123,11 @@ export async function PATCH(request: Request) {
 
   const sql = getDb()
   const body = await request.json()
-  const { institutionId, organizationId, action, rejectionReason } = body
+  const { institutionId, action, rejectionReason } = body
 
-  const orgId = institutionId || organizationId
-
-  if (!orgId || !action) {
+  if (!institutionId || !action) {
     return NextResponse.json(
-      { error: "institutionId/organizationId e action sao obrigatorios" },
+      { error: "institutionId e action sao obrigatorios" },
       { status: 400 }
     )
   }
@@ -129,50 +139,56 @@ export async function PATCH(request: Request) {
     )
   }
 
-  // Buscar organizacao
-  const orgs = await sql`
-    SELECT o.*, u.id as user_id, u.email as user_email
-    FROM organizations o
-    LEFT JOIN users u ON u."organizationId" = o.id
-    WHERE o.id = ${orgId}
+  // Buscar instituicao
+  const institutions = await sql`
+    SELECT i.*, u.id as uid, u.email as user_email
+    FROM institutions i
+    LEFT JOIN users u ON i.user_id = u.id
+    WHERE i.id = ${institutionId}
   `
 
-  if (orgs.length === 0) {
-    return NextResponse.json({ error: "Organizacao nao encontrada" }, { status: 404 })
+  if (institutions.length === 0) {
+    return NextResponse.json({ error: "Instituicao nao encontrada" }, { status: 404 })
   }
 
-  const org = orgs[0]
+  const inst = institutions[0]
 
   if (action === "approve") {
     await sql`
-      UPDATE organizations
-      SET "isVerified" = true, "updatedAt" = NOW()
-      WHERE id = ${orgId}
+      UPDATE institutions
+      SET is_verified = true, verified_at = NOW(), updated_at = NOW()
+      WHERE id = ${institutionId}
     `
 
-    // Atualizar status do usuario vinculado se existir
-    if (org.user_id) {
+    // Atualizar usuario vinculado para ativo e verificado
+    if (inst.uid) {
       await sql`
         UPDATE users
-        SET status = 'ACTIVE', "updatedAt" = NOW()
-        WHERE id = ${org.user_id}
+        SET is_verified = true, is_active = true, updated_at = NOW()
+        WHERE id = ${inst.uid}
       `
     }
 
-    console.log(`[ADMIN] Organizacao aprovada: ${org.name} (${org.type})`)
+    console.log(`[ADMIN] Instituicao aprovada: ${inst.name} (${inst.type})`)
 
     return NextResponse.json({
       success: true,
-      message: `Organizacao "${org.name}" aprovada com sucesso`,
-      institution: { id: org.id, name: org.name, isVerified: true },
+      message: `Instituicao "${inst.name}" aprovada com sucesso`,
+      institution: { id: inst.id, name: inst.name, isVerified: true },
     })
   } else {
-    console.log(`[ADMIN] Organizacao rejeitada: ${org.name} - ${rejectionReason}`)
+    await sql`
+      UPDATE institutions
+      SET rejection_reason = ${rejectionReason || 'Cadastro nao aprovado'}, updated_at = NOW()
+      WHERE id = ${institutionId}
+    `
+
+    console.log(`[ADMIN] Instituicao rejeitada: ${inst.name} - ${rejectionReason}`)
 
     return NextResponse.json({
       success: true,
-      message: `Organizacao "${org.name}" rejeitada`,
-      institution: { id: org.id, name: org.name, isVerified: false },
+      message: `Instituicao "${inst.name}" rejeitada`,
+      institution: { id: inst.id, name: inst.name, isVerified: false },
     })
   }
 }

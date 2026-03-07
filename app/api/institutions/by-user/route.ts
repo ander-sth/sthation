@@ -1,7 +1,8 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
-// Usar tabelas corretas: users tem organizationId que aponta para organizations
+// Schema real:
+// institutions: id, name, cnpj, type, description, city, state, user_id, is_verified
 
 export async function GET(request: Request) {
   if (!process.env.DATABASE_URL) {
@@ -17,12 +18,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Buscar organizacao atraves do organizationId do usuario
+    // Buscar instituicao pelo user_id (coluna correta no schema)
     const results = await sql`
-      SELECT o.* 
-      FROM organizations o
-      JOIN users u ON u."organizationId" = o.id
-      WHERE u.id = ${userId}
+      SELECT * 
+      FROM institutions
+      WHERE user_id = ${userId}
       LIMIT 1
     `
 
@@ -30,22 +30,24 @@ export async function GET(request: Request) {
       return NextResponse.json({ institution: null })
     }
 
-    const org = results[0]
+    const inst = results[0]
     return NextResponse.json({ 
       institution: {
-        id: org.id,
-        name: org.name,
-        cnpj: org.document,
-        document: org.document,
-        type: org.type,
-        description: org.description,
-        isVerified: org.isVerified,
-        city: org.city,
-        state: org.state,
-        phone: org.phone,
-        email: org.email,
-        website: org.website,
-        createdAt: org.createdAt,
+        id: inst.id,
+        name: inst.name,
+        cnpj: inst.cnpj,
+        document: inst.cnpj,
+        type: inst.type,
+        description: inst.description,
+        isVerified: inst.is_verified,
+        city: inst.city,
+        state: inst.state,
+        phone: inst.phone,
+        website: inst.website,
+        responsibleName: inst.responsible_name,
+        responsibleEmail: inst.responsible_email,
+        responsiblePhone: inst.responsible_phone,
+        createdAt: inst.created_at,
       }
     })
   } catch (error) {
