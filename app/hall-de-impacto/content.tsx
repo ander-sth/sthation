@@ -853,16 +853,16 @@ export function HallDeImpactoContent() {
               </TabsContent>
             </Tabs>
 
-            {/* Info sobre negociacao */}
+            {/* Info sobre negociação */}
             <div className="mt-12 rounded-xl border border-teal-200 bg-white shadow-sm p-6">
               <div className="flex items-start gap-4">
                 <div className="rounded-full bg-teal-100 p-3 shrink-0">
                   <ExternalLink className="h-6 w-6 text-teal-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold mb-2 text-gray-900">Negociacao de Impactos</h3>
+                  <h3 className="text-lg font-semibold mb-2 text-gray-900">Negociação de Impactos</h3>
                   <p className="text-gray-600 text-sm">
-                    A STHATION e uma plataforma de <strong>registro e validacao</strong> de impactos. A negociacao dos
+                    A STHATION é uma plataforma de <strong>registro e validação</strong> de impactos. A negociação dos
                     impactos sociais e ambientais acontece em plataformas parceiras especializadas.
                   </p>
                 </div>

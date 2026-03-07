@@ -73,7 +73,7 @@ export function HowItWorks() {
                     {"hasImage" in step && step.hasImage && (
                       <Image
                         src="/vca-banner.jpg"
-                        alt="Validacao por Consenso Aferido"
+                        alt="Validação por Consenso Aferido"
                         width={400}
                         height={240}
                         className="mt-4 h-auto w-full rounded-xl"

@@ -8,26 +8,26 @@ import { UserCheck, GraduationCap, ShieldCheck, Coins, ArrowRight, CheckCircle2 
 const benefits = [
   {
     icon: GraduationCap,
-    title: "Formacao Gratuita",
-    description: "Acesse a Sthation Academy e obtenha certificacao como auditor comunitario sem custo.",
+    title: "Formação Gratuita",
+    description: "Acesse a Sthation Academy e obtenha certificação como auditor comunitário sem custo.",
   },
   {
     icon: ShieldCheck,
     title: "Valide Impactos Reais",
-    description: "Analise evidencias de projetos sociais com fotos, GPS e documentos e vote pela aprovacao ou rejeicao.",
+    description: "Analise evidências de projetos sociais com fotos, GPS e documentos e vote pela aprovação ou rejeição.",
   },
   {
     icon: Coins,
     title: "Receba Recompensas",
-    description: "Ganhe tokens NOBIS por cada validacao realizada no sistema VCA (Validacao Comunitaria de Acoes).",
+    description: "Ganhe tokens NOBIS por cada validação realizada no sistema VCA (Validação Comunitária de Ações).",
   },
 ]
 
 const requirements = [
   "Ter 18 anos ou mais",
   "Completar o curso na Sthation Academy",
-  "Obter aprovacao no exame de certificacao",
-  "Manter conduta etica nas validacoes",
+  "Obter aprovação no exame de certificação",
+  "Manter conduta ética nas validações",
 ]
 
 export function CheckerSection() {
@@ -47,9 +47,9 @@ export function CheckerSection() {
             </h2>
 
             <p className="mb-8 text-lg text-foreground/60 leading-relaxed text-pretty">
-              Checkers sao auditores comunitarios que garantem a veracidade dos projetos sociais na plataforma.
-              Atraves do VCA (Validacao Comunitaria de Acoes), voce analisa evidencias reais e vota pela
-              aprovacao ou rejeicao de cada projeto. Sua participacao e fundamental para manter a transparencia
+              Checkers são auditores comunitários que garantem a veracidade dos projetos sociais na plataforma.
+              Através do VCA (Validação Comunitária de Ações), você analisa evidências reais e vota pela
+              aprovação ou rejeição de cada projeto. Sua participação é fundamental para manter a transparência
               do ecossistema.
             </p>
 
@@ -86,7 +86,7 @@ export function CheckerSection() {
             <div className="w-full max-w-md">
               <Image
                 src="/vca-banner.jpg"
-                alt="Validacao por Consenso Aferido - 10 validadores, 6 criterios, score 0-100"
+                alt="Validação por Consenso Aferido - 10 validadores, 6 critérios, score 0-100"
                 width={640}
                 height={400}
                 className="h-auto w-full rounded-2xl shadow-lg"
@@ -123,7 +123,7 @@ export function CheckerSection() {
                 <ul className="space-y-2 text-sm text-white/70">
                   <li className="flex items-center gap-2">
                     <div className="h-1 w-1 rounded-full bg-teal-400" />
-                    Acesso ao painel VCA de votacao
+                    Acesso ao painel VCA de votação
                   </li>
                   <li className="flex items-center gap-2">
                     <div className="h-1 w-1 rounded-full bg-teal-400" />
@@ -131,11 +131,11 @@ export function CheckerSection() {
                   </li>
                   <li className="flex items-center gap-2">
                     <div className="h-1 w-1 rounded-full bg-teal-400" />
-                    Certificado de auditor comunitario
+                    Certificado de auditor comunitário
                   </li>
                   <li className="flex items-center gap-2">
                     <div className="h-1 w-1 rounded-full bg-teal-400" />
-                    Participacao no ecossistema descentralizado
+                    Participação no ecossistema descentralizado
                   </li>
                 </ul>
               </div>
