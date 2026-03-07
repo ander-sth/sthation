@@ -1,9 +1,13 @@
 import { neon } from "@neondatabase/serverless"
 import { NextRequest, NextResponse } from "next/server"
 
-// Usar tabela "impact_action_cards" que existe no banco
-// Schema: id, title, description, category, status, verificationCode, organizationId, 
-// beneficiaries, budget, location, city, state, startDate, endDate, imageUrl, odsGoals, createdAt, updatedAt
+// Schema impact_action_cards (real do banco):
+// id, title, description, category, type, status, institution_id, location_name, location_state,
+// location_lat, location_lng, coordinates, budget, estimated_beneficiaries, deadline,
+// vca_score, polygon_tx_hash, polygon_block_number, inscription_id, trail_id,
+// tsb_category_id, project_status, data_collection_type, measurement_unit, certification_standard,
+// existing_certifications, sensor_types, sensors_count, area_size, waste_processed, energy_generated,
+// submitted_at, validated_at, minted_at, created_at, updated_at
 
 export async function GET(request: NextRequest) {
   if (!process.env.DATABASE_URL) {
@@ -16,40 +20,49 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get("type")
     const status = searchParams.get("status")
+    const institutionId = searchParams.get("institutionId")
     const limit = parseInt(searchParams.get("limit") || "50")
 
     // Query usando colunas corretas da tabela impact_action_cards
+    // JOIN com institutions (não organizations)
     const rows = await sql`
       SELECT 
         iac.id,
         iac.title,
         iac.description,
         iac.category,
+        iac.type,
         iac.status,
-        iac."verificationCode",
-        iac.beneficiaries,
+        iac.institution_id,
+        iac.location_name,
+        iac.location_state,
+        iac.location_lat,
+        iac.location_lng,
+        iac.coordinates,
         iac.budget,
-        iac.location,
-        iac.city,
-        iac.state,
-        iac."startDate",
-        iac."endDate",
-        iac."imageUrl",
-        iac."odsGoals",
-        iac."organizationId",
-        iac."createdAt",
-        iac."updatedAt",
-        o.id as org_id,
-        o.name as org_name,
-        o.document as org_document,
-        o.type as org_type,
-        o.city as org_city,
-        o.state as org_state,
-        o."isVerified" as org_verified,
-        (SELECT COUNT(*) FROM evidences e WHERE e."iacId" = iac.id) as evidence_count
+        iac.estimated_beneficiaries,
+        iac.deadline,
+        iac.vca_score,
+        iac.polygon_tx_hash,
+        iac.polygon_block_number,
+        iac.inscription_id,
+        iac.trail_id,
+        iac.project_status,
+        iac.submitted_at,
+        iac.validated_at,
+        iac.minted_at,
+        iac.created_at,
+        iac.updated_at,
+        i.id as inst_id,
+        i.name as inst_name,
+        i.cnpj as inst_cnpj,
+        i.type as inst_type,
+        i.city as inst_city,
+        i.state as inst_state,
+        i.is_verified as inst_verified
       FROM impact_action_cards iac
-      LEFT JOIN organizations o ON iac."organizationId" = o.id
-      ORDER BY iac."createdAt" DESC
+      LEFT JOIN institutions i ON iac.institution_id = i.id
+      ORDER BY iac.created_at DESC
       LIMIT ${limit}
     `
 
@@ -58,45 +71,51 @@ export async function GET(request: NextRequest) {
       title: row.title,
       description: row.description,
       category: row.category,
-      type: row.category?.toLowerCase().includes('ambiental') ? 'AMBIENTAL' : 'SOCIAL',
+      type: row.type || (row.category?.toLowerCase().includes('ambiental') ? 'AMBIENTAL' : 'SOCIAL'),
       status: row.status,
-      verificationCode: row.verificationCode,
-      location: row.location || (row.city ? `${row.city}, ${row.state}` : null),
-      location_name: row.city,
-      location_state: row.state,
-      city: row.city,
-      state: row.state,
+      institutionId: row.institution_id,
+      institution_id: row.institution_id,
+      location: row.location_name ? `${row.location_name}, ${row.location_state}` : null,
+      location_name: row.location_name,
+      location_state: row.location_state,
+      city: row.location_name,
+      state: row.location_state,
+      locationLat: row.location_lat,
+      locationLng: row.location_lng,
+      coordinates: row.coordinates,
       budget: parseFloat(row.budget) || 0,
-      estimatedBeneficiaries: row.beneficiaries,
-      beneficiaries: row.beneficiaries,
-      startDate: row.startDate,
-      endDate: row.endDate,
-      imageUrl: row.imageUrl,
-      odsGoals: row.odsGoals || [],
-      createdAt: row.createdAt,
-      created_at: row.createdAt,
-      updatedAt: row.updatedAt,
-      organizationId: row.organizationId,
-      institution_id: row.org_id,
-      institution_name: row.org_name,
-      institution_type: row.org_type,
-      institution: row.org_id ? {
-        id: row.org_id,
-        name: row.org_name,
-        cnpj: row.org_document,
-        document: row.org_document,
-        type: row.org_type,
-        city: row.org_city,
-        state: row.org_state,
-        isVerified: row.org_verified,
+      estimatedBeneficiaries: row.estimated_beneficiaries,
+      beneficiaries: row.estimated_beneficiaries,
+      deadline: row.deadline,
+      vcaScore: row.vca_score,
+      polygonTxHash: row.polygon_tx_hash,
+      polygonBlockNumber: row.polygon_block_number,
+      inscriptionId: row.inscription_id,
+      trailId: row.trail_id,
+      projectStatus: row.project_status,
+      submittedAt: row.submitted_at,
+      validatedAt: row.validated_at,
+      mintedAt: row.minted_at,
+      createdAt: row.created_at,
+      created_at: row.created_at,
+      updatedAt: row.updated_at,
+      // Dados da instituição
+      institution_name: row.inst_name,
+      institution: row.inst_id ? {
+        id: row.inst_id,
+        name: row.inst_name,
+        cnpj: row.inst_cnpj,
+        type: row.inst_type,
+        city: row.inst_city,
+        state: row.inst_state,
+        isVerified: row.inst_verified,
       } : null,
-      evidenceCount: parseInt(row.evidence_count) || 0,
     }))
 
     // Filtrar por tipo se especificado
     if (type) {
       projects = projects.filter((p: any) => 
-        p.type?.toLowerCase() === type.toLowerCase() ||
+        p.type?.toUpperCase() === type.toUpperCase() ||
         p.category?.toLowerCase().includes(type.toLowerCase())
       )
     }
@@ -104,7 +123,14 @@ export async function GET(request: NextRequest) {
     // Filtrar por status se especificado
     if (status) {
       projects = projects.filter((p: any) => 
-        p.status?.toLowerCase() === status.toLowerCase()
+        p.status?.toUpperCase() === status.toUpperCase()
+      )
+    }
+
+    // Filtrar por instituição se especificado
+    if (institutionId) {
+      projects = projects.filter((p: any) => 
+        p.institution_id === institutionId
       )
     }
 
@@ -131,31 +157,24 @@ export async function POST(request: NextRequest) {
       title,
       description,
       category,
-      organizationId,
-      city,
-      state,
+      type,
+      institutionId,
+      locationName,
+      locationState,
       budget,
-      beneficiaries,
-      startDate,
-      endDate,
-      imageUrl,
-      odsGoals,
+      estimatedBeneficiaries,
+      deadline,
     } = body
-
-    // Gerar codigo de verificacao unico
-    const verificationCode = `IAC-${Date.now().toString(36).toUpperCase()}`
 
     const result = await sql`
       INSERT INTO impact_action_cards (
-        title, description, category, "organizationId", 
-        city, state, budget, beneficiaries,
-        "startDate", "endDate", "imageUrl", "odsGoals",
-        "verificationCode", status, "createdAt", "updatedAt"
+        title, description, category, type, institution_id,
+        location_name, location_state, budget, estimated_beneficiaries,
+        deadline, status, created_at, updated_at
       ) VALUES (
-        ${title}, ${description}, ${category}, ${organizationId || null},
-        ${city || null}, ${state || null}, ${budget || 0}, ${beneficiaries || 0},
-        ${startDate || null}, ${endDate || null}, ${imageUrl || null}, ${JSON.stringify(odsGoals || [])}::jsonb,
-        ${verificationCode}, 'draft', NOW(), NOW()
+        ${title}, ${description}, ${category || type}, ${type || 'SOCIAL'}, ${institutionId || null},
+        ${locationName || null}, ${locationState || null}, ${budget || 0}, ${estimatedBeneficiaries || 0},
+        ${deadline || null}, 'DRAFT', NOW(), NOW()
       )
       RETURNING *
     `

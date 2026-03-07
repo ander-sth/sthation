@@ -1,7 +1,9 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
-// Usar tabelas corretas: impact_action_cards e organizations
+// Schema real:
+// impact_action_cards: id, title, description, category, type, status, institution_id, location_name, location_state, estimated_beneficiaries, budget
+// institutions: id, name, cnpj, type, user_id, is_verified
 
 export async function GET(request: Request) {
   if (!process.env.DATABASE_URL) {
@@ -11,55 +13,73 @@ export async function GET(request: Request) {
   const sql = neon(process.env.DATABASE_URL)
   const { searchParams } = new URL(request.url)
   const institutionUserId = searchParams.get("institution_user_id")
-  const organizationId = searchParams.get("organization_id")
+  const institutionId = searchParams.get("institution_id") || searchParams.get("organization_id")
 
   try {
     let iacs
     
     if (institutionUserId) {
-      // Buscar IACs pelo usuario da organizacao
+      // Buscar IACs pelo usuario da instituicao
       iacs = await sql`
         SELECT 
           iac.*,
-          o.name as organization_name,
-          o.id as organization_id
+          i.name as institution_name,
+          i.id as inst_id
         FROM impact_action_cards iac
-        LEFT JOIN organizations o ON iac."organizationId" = o.id
-        LEFT JOIN users u ON u."organizationId" = o.id
-        WHERE u.id = ${institutionUserId}
-        ORDER BY iac."createdAt" DESC
+        LEFT JOIN institutions i ON iac.institution_id = i.id
+        WHERE i.user_id = ${institutionUserId}
+        ORDER BY iac.created_at DESC
       `
-    } else if (organizationId) {
-      // Buscar IACs pela organizacao diretamente
+    } else if (institutionId) {
+      // Buscar IACs pela instituicao diretamente
       iacs = await sql`
         SELECT 
           iac.*,
-          o.name as organization_name,
-          o.id as organization_id
+          i.name as institution_name,
+          i.id as inst_id
         FROM impact_action_cards iac
-        LEFT JOIN organizations o ON iac."organizationId" = o.id
-        WHERE iac."organizationId" = ${organizationId}
-        ORDER BY iac."createdAt" DESC
+        LEFT JOIN institutions i ON iac.institution_id = i.id
+        WHERE iac.institution_id = ${institutionId}
+        ORDER BY iac.created_at DESC
       `
     } else {
       // Buscar todos
       iacs = await sql`
         SELECT 
           iac.*,
-          o.name as organization_name,
-          o.id as organization_id
+          i.name as institution_name,
+          i.id as inst_id
         FROM impact_action_cards iac
-        LEFT JOIN organizations o ON iac."organizationId" = o.id
-        ORDER BY iac."createdAt" DESC
+        LEFT JOIN institutions i ON iac.institution_id = i.id
+        ORDER BY iac.created_at DESC
         LIMIT 50
       `
     }
 
     // Formatar resposta
     const formattedIacs = (iacs || []).map((iac: any) => ({
-      ...iac,
-      institution_name: iac.organization_name,
-      institution_id: iac.organization_id,
+      id: iac.id,
+      title: iac.title,
+      description: iac.description,
+      category: iac.category,
+      type: iac.type,
+      status: iac.status,
+      institutionId: iac.institution_id,
+      institution_id: iac.institution_id,
+      institution_name: iac.institution_name,
+      locationName: iac.location_name,
+      locationState: iac.location_state,
+      location_name: iac.location_name,
+      location_state: iac.location_state,
+      estimatedBeneficiaries: iac.estimated_beneficiaries,
+      budget: iac.budget,
+      deadline: iac.deadline,
+      vcaScore: iac.vca_score,
+      polygonTxHash: iac.polygon_tx_hash,
+      inscriptionId: iac.inscription_id,
+      trailId: iac.trail_id,
+      createdAt: iac.created_at,
+      updatedAt: iac.updated_at,
     }))
 
     return NextResponse.json({ iacs: formattedIacs })
@@ -82,27 +102,14 @@ export async function POST(request: Request) {
       title, 
       description, 
       category, 
-      city,
-      state,
+      type,
       locationName, 
       locationState, 
-      targetBeneficiaries,
-      beneficiaries, 
-      fundingGoal,
+      estimatedBeneficiaries,
       budget, 
-      startDate, 
-      endDate, 
-      organizationId,
+      deadline, 
       institutionId,
-      imageUrl,
-      odsGoals,
     } = body
-
-    const finalOrgId = organizationId || institutionId
-    const finalCity = city || locationName
-    const finalState = state || locationState
-    const finalBeneficiaries = beneficiaries || targetBeneficiaries || 0
-    const finalBudget = budget || fundingGoal || 0
 
     if (!title || !description || !category) {
       return NextResponse.json(
@@ -111,44 +118,35 @@ export async function POST(request: Request) {
       )
     }
 
-    // Gerar codigo de verificacao
-    const verificationCode = `IAC-${Date.now().toString(36).toUpperCase()}`
-
-    // Criar IAC com colunas corretas
+    // Criar IAC com colunas corretas do schema real
     const newIac = await sql`
       INSERT INTO impact_action_cards (
-        "organizationId", 
+        institution_id, 
         title, 
         description, 
         category,
-        city,
-        state,
-        beneficiaries,
+        type,
+        location_name,
+        location_state,
+        estimated_beneficiaries,
         budget,
-        "startDate",
-        "endDate",
-        "imageUrl",
-        "odsGoals",
-        "verificationCode",
+        deadline,
         status,
-        "createdAt",
-        "updatedAt"
+        created_at,
+        updated_at
       )
       VALUES (
-        ${finalOrgId || null},
+        ${institutionId || null},
         ${title},
         ${description},
         ${category},
-        ${finalCity || null},
-        ${finalState || null},
-        ${parseInt(finalBeneficiaries) || 0},
-        ${parseFloat(finalBudget) || 0},
-        ${startDate || null},
-        ${endDate || null},
-        ${imageUrl || null},
-        ${JSON.stringify(odsGoals || [])}::jsonb,
-        ${verificationCode},
-        'draft',
+        ${type || 'SOCIAL'},
+        ${locationName || null},
+        ${locationState || null},
+        ${parseInt(estimatedBeneficiaries) || 0},
+        ${parseFloat(budget) || 0},
+        ${deadline || null},
+        'DRAFT',
         NOW(),
         NOW()
       )
