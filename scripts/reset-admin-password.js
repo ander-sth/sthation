@@ -31,11 +31,8 @@ async function resetPasswords() {
     // Atualizar todos os usuarios de teste
     const result = await sql`
       UPDATE users 
-      SET 
-        password_hash = ${newHash},
-        "passwordHash" = ${newHash},
-        "updatedAt" = NOW()
-      WHERE email LIKE '%@sthation%'
+      SET password_hash = ${newHash}
+      WHERE email = 'admin@sthation.com'
       RETURNING email, name, role
     `;
     
@@ -44,11 +41,11 @@ async function resetPasswords() {
     
     // Listar todos os usuarios
     const allUsers = await sql`
-      SELECT email, name, role, status FROM users ORDER BY email
+      SELECT email, name, role FROM users ORDER BY email
     `;
     
     console.log('\nTodos os usuarios no banco:');
-    allUsers.forEach(u => console.log(`  - ${u.email} (${u.role}) - Status: ${u.status}`));
+    allUsers.forEach(u => console.log(`  - ${u.email} (${u.role})`));
     
     console.log('\n=== CREDENCIAIS DE TESTE ===');
     console.log('Email: admin@sthation.com');
