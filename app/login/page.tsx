@@ -13,58 +13,6 @@ import { Loader2, ArrowLeft } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
-// Contas reais cadastradas no banco de dados (senha padrao: 123456)
-const TEST_ACCOUNTS = [
-  {
-    email: "admin@sthation.com",
-    password: "123456",
-    role: "Administrador",
-    name: "Admin STHATION",
-    icon: Shield,
-    description: "Gerenciar usuarios, aprovar instituicoes, configurar plataforma",
-  },
-  {
-    email: "rafaelsth@protonmail.com",
-    password: "123456",
-    role: "Doador",
-    name: "Anderson Rafael Rosa",
-    icon: Heart,
-    description: "Doar para projetos, acompanhar impacto, adquirir Nobis",
-  },
-  {
-    email: "abrigoanimal@sthation.com",
-    password: "123456",
-    role: "Instituicao Social",
-    name: "Abrigo Animal",
-    icon: Building2,
-    description: "Criar projetos IAC, coletar evidencias",
-  },
-  {
-    email: "organa@sthation.com",
-    password: "123456",
-    role: "Empresa Ambiental",
-    name: "Organa Biotech",
-    icon: Factory,
-    description: "Projetos ambientais, sensores IoT, creditos carbono",
-  },
-  {
-    email: "prefeitura@sthation.com",
-    password: "123456",
-    role: "Prefeitura (Gov)",
-    name: "Prefeitura de Joinville",
-    icon: Landmark,
-    description: "Projetos sociais e ambientais municipais",
-  },
-  {
-    email: "checker@sthation.com",
-    password: "123456",
-    role: "Checker",
-    name: "Anderson Rafael Rosa",
-    icon: Users,
-    description: "Validar projetos VCA, atribuir scores, consenso",
-  },
-]
-
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -90,11 +38,6 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const fillDemo = (demoEmail: string, demoPassword: string) => {
-    setEmail(demoEmail)
-    setPassword(demoPassword)
   }
 
   return (
@@ -126,7 +69,7 @@ export default function LoginPage() {
             <p className="text-teal-400 mt-2">The Immutable Impact Layer</p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="w-full max-w-md mx-auto">
             {/* Login Card */}
             <Card className="bg-white/5 backdrop-blur-sm border-teal-400/20">
               <CardHeader>
@@ -187,43 +130,6 @@ export default function LoginPage() {
                   </p>
                 </CardFooter>
               </form>
-            </Card>
-
-            {/* Test Accounts Card */}
-            <Card className="max-h-[500px] overflow-y-auto bg-white/5 backdrop-blur-sm border-teal-400/20">
-              <CardHeader className="sticky top-0 bg-[#0a2f2f]/90 backdrop-blur-sm z-10">
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <Info className="h-5 w-5 text-teal-400" />
-                  Contas de Teste
-                </CardTitle>
-                <CardDescription className="text-white/60">Acesso rapido as contas cadastradas</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {TEST_ACCOUNTS.map((account) => (
-                    <button
-                      key={account.email}
-                      type="button"
-                      onClick={() => fillDemo(account.email, account.password)}
-                      className="flex w-full items-start gap-3 rounded-lg border border-teal-400/20 p-3 text-left transition-colors hover:bg-teal-400/10 hover:border-teal-400/40"
-                    >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-teal-400/10 text-teal-400">
-                        <account.icon className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-sm text-white">{account.role}</span>
-                          <span className="rounded bg-teal-400/20 px-1.5 py-0.5 text-xs font-mono text-teal-400">
-                            {account.password}
-                          </span>
-                        </div>
-                        <p className="text-xs text-white/50 truncate">{account.email}</p>
-                        <p className="text-xs text-white/40 mt-0.5 line-clamp-2">{account.description}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
             </Card>
           </div>
 
