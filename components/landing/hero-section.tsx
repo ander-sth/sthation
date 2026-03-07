@@ -57,33 +57,17 @@ export function HeroSection() {
               </Button>
             </div>
 
-            {/* Right - Blockchain visualization */}
+            {/* Right - Sthation Logo */}
             <div className="relative hidden lg:flex items-center justify-center">
-              <div className="relative w-full aspect-square max-w-lg">
-                {/* Central glowing element */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-80 h-80 rounded-full bg-gradient-to-br from-teal-400/20 to-cyan-400/20 blur-xl animate-pulse" />
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div
-                    className="w-72 h-72 rounded-full border-2 border-teal-400/30 animate-spin"
-                    style={{ animationDuration: "20s" }}
-                  />
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div
-                    className="w-56 h-56 rounded-full border border-cyan-400/50 animate-spin"
-                    style={{ animationDuration: "15s", animationDirection: "reverse" }}
-                  />
-                </div>
-                {/* Sthation Logo - Leaf */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <img 
-                    src="/sthation-logo-leaf.png" 
-                    alt="Sthation Logo" 
-                    className="w-40 h-40 object-contain drop-shadow-[0_0_25px_rgba(45,212,191,0.7)]" 
-                  />
-                </div>
+              <div className="relative w-full aspect-square max-w-lg flex items-center justify-center">
+                {/* Subtle glow behind logo */}
+                <div className="absolute w-96 h-96 bg-teal-400/10 rounded-full blur-3xl" />
+                {/* Sthation Logo - White */}
+                <img 
+                  src="/sthation-icon.png" 
+                  alt="Sthation Logo" 
+                  className="w-80 h-80 object-contain drop-shadow-[0_0_40px_rgba(45,212,191,0.5)] relative z-10" 
+                />
               </div>
             </div>
           </div>
