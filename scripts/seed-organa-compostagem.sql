@@ -45,7 +45,7 @@ INSERT INTO institutions (
   'Organa Soluções Ambientais',
   'AMBIENTAL',
   '12.345.678/0001-90',
-  'Empresa especializada em compostagem industrial e gestão de resíduos orgânicos. Transformamos resíduos em recursos, promovendo a economia circular e a sustentabilidade ambiental.',
+  'Empresa de compostagem industrial e gestao de residuos organicos.',
   'Rua das Palmeiras, 456, Sala 12',
   'Joinville',
   'SC',
@@ -119,10 +119,10 @@ INSERT INTO impact_action_cards (
 
 -- 4. Criar evidências do projeto (fotos, relatórios)
 INSERT INTO evidences (id, iac_id, type, description, url, content_hash, captured_at, gps_lat, gps_lng, created_at) VALUES
-  ('d4e5f6a7-b8c9-0123-def0-456789012345', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'PHOTO', 'Instalacao composteira Agora', '/evidences/organa/instalacao.jpg', 'h001', '2026-02-08 09:00:00', -26.2528, -48.8489, NOW()),
-  ('e5f6a7b8-c9d0-1234-ef01-567890123456', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'PHOTO', 'Coleta residuos restaurante', '/evidences/organa/coleta.jpg', 'h002', '2026-02-15 10:30:00', -26.2528, -48.8489, NOW()),
-  ('f6a7b8c9-d0e1-2345-f012-678901234567', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'SENSOR', 'Dados temp/umidade sensor', '/evidences/organa/sensor.json', 'h003', '2026-03-10 18:00:00', -26.2528, -48.8489, NOW()),
-  ('a7b8c9d0-e1f2-3456-0123-789012345678', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'DOCUMENT', 'Relatorio tecnico ciclo', '/evidences/organa/relatorio.pdf', 'h004', '2026-03-11 14:00:00', -26.2528, -48.8489, NOW())
+  ('d4e5f6a7-b8c9-0123-def0-456789012345', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'PHOTO', 'Instalacao composteira', '/img/e1.jpg', 'a1b2c3', '2026-02-08 09:00:00', -26.2528, -48.8489, NOW()),
+  ('e5f6a7b8-c9d0-1234-ef01-567890123456', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'PHOTO', 'Coleta residuos', '/img/e2.jpg', 'b2c3d4', '2026-02-15 10:30:00', -26.2528, -48.8489, NOW()),
+  ('f6a7b8c9-d0e1-2345-f012-678901234567', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'SENSOR', 'Dados sensor', '/data/s1.json', 'c3d4e5', '2026-03-10 18:00:00', -26.2528, -48.8489, NOW()),
+  ('a7b8c9d0-e1f2-3456-0123-789012345678', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'DOCUMENT', 'Relatorio', '/docs/r1.pdf', 'd4e5f6', '2026-03-11 14:00:00', -26.2528, -48.8489, NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- 5. Criar pipeline trail para o projeto
@@ -148,7 +148,7 @@ INSERT INTO pipeline_trails (
   'AMBIENTAL',
   'POLYGON_REGISTERED',
   'CERTIFIED',
-  '0x8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b',
+  '0x8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d',
   '{
     "project": "Compostagem Ágora Tech Park",
     "partner": "Organa",
@@ -176,7 +176,7 @@ INSERT INTO pipeline_trails (
     }
   }',
   true,
-  '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+  '0x1234567890abcdef1234567890abcdef1234567890abcdef12345678',
   58742315,
   '2026-03-11 15:30:00',
   '2026-02-01',
@@ -210,10 +210,10 @@ INSERT INTO polygon_tokens (
   1000,
   1000,
   0,
-  '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+  '0x1234567890abcdef1234567890abcdef1234567890abcdef12345678',
   '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD45',
   58742315,
-  '0x8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b',
+  '0x8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d',
   'MINTED',
   '{
     "title": "Compostagem Ágora Tech Park - Ciclo Fev/Mar 2026",
@@ -256,7 +256,7 @@ INSERT INTO bridge_queue (
   'INSTITUTION',
   'b2c3d4e5-f6a7-8901-bcde-f23456789012',
   'NOBIS-ORGANA-2026-001',
-  '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+  '0x1234567890abcdef1234567890abcdef1234567890abcdef12345678',
   58742315,
   100,
   'PENDING_BRIDGE',
