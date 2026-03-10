@@ -121,8 +121,8 @@ INSERT INTO impact_action_cards (
 INSERT INTO evidences (id, iac_id, type, description, url, content_hash, captured_at, gps_lat, gps_lng, created_at) VALUES
   ('d4e5f6a7-b8c9-0123-def0-456789012345', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'PHOTO', 'Instalação da composteira no Ágora Tech Park', '/evidences/organa/instalacao-composteira.jpg', 'hash_img_001', '2026-02-08 09:00:00', -26.2528, -48.8489, NOW()),
   ('e5f6a7b8-c9d0-1234-ef01-567890123456', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'PHOTO', 'Coleta de resíduos orgânicos do restaurante', '/evidences/organa/coleta-residuos.jpg', 'hash_img_002', '2026-02-15 10:30:00', -26.2528, -48.8489, NOW()),
-  ('f6a7b8c9-d0e1-2345-f012-678901234567', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'SENSOR_DATA', 'Dados de temperatura e umidade da composteira', '/evidences/organa/sensor-data-fev-mar.json', 'hash_sensor_001', '2026-03-10 18:00:00', -26.2528, -48.8489, NOW()),
-  ('a7b8c9d0-e1f2-3456-0123-789012345678', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'REPORT', 'Relatório técnico de compostagem - Ciclo completo', '/evidences/organa/relatorio-tecnico.pdf', 'hash_report_001', '2026-03-11 14:00:00', -26.2528, -48.8489, NOW())
+  ('f6a7b8c9-d0e1-2345-f012-678901234567', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'SENSOR', 'Dados de temperatura e umidade da composteira', '/evidences/organa/sensor-data-fev-mar.json', 'hash_sensor_001', '2026-03-10 18:00:00', -26.2528, -48.8489, NOW()),
+  ('a7b8c9d0-e1f2-3456-0123-789012345678', 'c3d4e5f6-a7b8-9012-cdef-345678901234', 'DOCUMENT', 'Relatório técnico de compostagem - Ciclo completo', '/evidences/organa/relatorio-tecnico.pdf', 'hash_report_001', '2026-03-11 14:00:00', -26.2528, -48.8489, NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- 5. Criar pipeline trail para o projeto
