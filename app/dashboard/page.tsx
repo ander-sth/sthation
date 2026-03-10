@@ -474,13 +474,10 @@ function ValidationHistory() {
 }
 
 function TechnicalDisputes() {
-  const { data, isLoading, error } = useApiData<{ projects: any[], total: number }>("/api/iac?type=AMBIENTAL&status=SUBMITTED&limit=10", {
+  const { data, isLoading } = useApiData<{ projects: any[] }>("/api/iac?type=AMBIENTAL&status=SUBMITTED&limit=10", {
     revalidateOnFocus: true
   })
   const projects = data?.projects || []
-  
-  // Debug temporário
-  console.log("[v0] TechnicalDisputes - data:", data, "isLoading:", isLoading, "error:", error, "projects:", projects)
 
   return (
     <Card className="border-border bg-card">
@@ -519,6 +516,9 @@ function TechnicalDisputes() {
 }
 
 function AnalysisHistory() {
+  const { data, isLoading } = useApiData<{ projects: any[] }>("/api/iac?type=AMBIENTAL&status=CERTIFIED&limit=10", {})
+  const projects = data?.projects || []
+
   return (
     <Card className="border-border bg-card">
       <CardHeader>
@@ -527,25 +527,21 @@ function AnalysisHistory() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {[
-            { project: "Biodigestor Fazenda Sol", result: "Certificado", impact: "320 tCO2e evitados" },
-            { project: "Reflorestamento Serra Verde", result: "Certificado", impact: "1.200 mudas plantadas" },
-            { project: "Tratamento Efluentes Rio Claro", result: "Rejeitado", impact: "Dados IoT inconsistentes" },
-          ].map((a, i) => (
-            <div key={i} className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="font-medium">{a.project}</p>
-                <p className="text-sm text-muted-foreground">{a.impact}</p>
+          {isLoading ? (
+            <div className="text-center py-4 text-muted-foreground">Carregando...</div>
+          ) : projects.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">Nenhuma certificacao realizada ainda.</div>
+          ) : (
+            projects.map((p: any) => (
+              <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <p className="font-medium">{p.title}</p>
+                  <p className="text-sm text-muted-foreground">{p.co2_avoided ? `${p.co2_avoided} tCO2e evitados` : p.category}</p>
+                </div>
+                <Badge className="bg-emerald-500/10 text-emerald-500">Certificado</Badge>
               </div>
-              <Badge
-                className={
-                  a.result === "Certificado" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
-                }
-              >
-                {a.result}
-              </Badge>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </CardContent>
     </Card>
