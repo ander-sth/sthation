@@ -99,7 +99,7 @@ INSERT INTO impact_action_cards (
   'Projeto de compostagem instalado no Ágora Tech Park em Joinville/SC. Sistema de composteira industrial processando resíduos orgânicos do restaurante e áreas comuns do parque tecnológico. Período de operação: 08/02/2026 a 10/03/2026 (31 dias). Capacidade de processamento: 30 kg/dia de resíduos orgânicos. Metodologia: Compostagem aeróbica com monitoramento de temperatura e umidade.',
   'AMBIENTAL',
   'Gestão de Resíduos',
-  'TSB-RES-001',
+  'RES-001',
   'CERTIFIED',
   'COMPLETED',
   'Ágora Tech Park, Joinville',
