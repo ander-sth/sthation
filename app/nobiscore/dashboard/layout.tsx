@@ -141,20 +141,15 @@ export default function NobisCoreDashboardLayout({
       const token = localStorage.getItem("nobiscore_token")
       const userData = localStorage.getItem("nobiscore_user")
 
-      console.log("[v0] NobisCore Auth Check - Token:", !!token, "UserData:", !!userData)
-
       if (!token || !userData) {
-        console.log("[v0] NobisCore - Redirecionando para login")
         window.location.href = "/nobiscore/login"
         return
       }
 
       try {
         const parsedUser = JSON.parse(userData)
-        console.log("[v0] NobisCore - Usuario logado:", parsedUser.email)
         setUser(parsedUser)
       } catch (e) {
-        console.log("[v0] NobisCore - Erro ao parsear usuario, redirecionando")
         localStorage.removeItem("nobiscore_token")
         localStorage.removeItem("nobiscore_user")
         window.location.href = "/nobiscore/login"
@@ -186,19 +181,60 @@ export default function NobisCoreDashboardLayout({
   }
 
   const handleWalletSelect = async (walletId: string) => {
-    // Simular conexão (na implementação real, usar web3 providers)
-    const fakeAddress = walletType === "evm" 
-      ? `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 10)}`
-      : `bc1q${Math.random().toString(16).slice(2, 20)}`
-    
-    if (walletType === "evm") {
-      localStorage.setItem("nobiscore_evm_address", fakeAddress)
-      setEvmAddress(fakeAddress)
-    } else {
-      localStorage.setItem("nobiscore_btc_address", fakeAddress)
-      setBtcAddress(fakeAddress)
+    try {
+      if (walletType === "evm") {
+        // Conexão real com MetaMask/EVM wallets
+        if (walletId === "metamask") {
+          if (typeof window !== "undefined" && (window as any).ethereum) {
+            const accounts = await (window as any).ethereum.request({ 
+              method: "eth_requestAccounts" 
+            })
+            if (accounts && accounts[0]) {
+              localStorage.setItem("nobiscore_evm_address", accounts[0])
+              setEvmAddress(accounts[0])
+            }
+          } else {
+            alert("MetaMask não encontrada. Por favor instale a extensão.")
+            return
+          }
+        } else {
+          alert(`Carteira ${walletId} será implementada em breve. Use MetaMask por enquanto.`)
+          return
+        }
+      } else {
+        // Conexão real com Bitcoin wallets
+        if (walletId === "unisat") {
+          if (typeof window !== "undefined" && (window as any).unisat) {
+            const accounts = await (window as any).unisat.requestAccounts()
+            if (accounts && accounts[0]) {
+              localStorage.setItem("nobiscore_btc_address", accounts[0])
+              setBtcAddress(accounts[0])
+            }
+          } else {
+            alert("Unisat não encontrada. Por favor instale a extensão.")
+            return
+          }
+        } else if (walletId === "xverse") {
+          if (typeof window !== "undefined" && (window as any).XverseProviders) {
+            const response = await (window as any).XverseProviders.request("getAccounts", {})
+            if (response?.result?.[0]?.address) {
+              localStorage.setItem("nobiscore_btc_address", response.result[0].address)
+              setBtcAddress(response.result[0].address)
+            }
+          } else {
+            alert("Xverse não encontrada. Por favor instale a extensão.")
+            return
+          }
+        } else {
+          alert(`Carteira ${walletId} será implementada em breve. Use Unisat ou Xverse por enquanto.`)
+          return
+        }
+      }
+      setShowWalletModal(false)
+    } catch (error: any) {
+      console.error("Erro ao conectar carteira:", error)
+      alert(error?.message || "Erro ao conectar carteira. Tente novamente.")
     }
-    setShowWalletModal(false)
   }
 
   const handleDisconnectWallet = (type: "evm" | "btc") => {
