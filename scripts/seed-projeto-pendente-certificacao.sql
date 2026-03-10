@@ -32,7 +32,7 @@ INSERT INTO impact_action_cards (
   updated_at
 ) VALUES (
   'aabbccdd-1111-2222-3333-444455556666',
-  'b2c3d4e5-a6b7-8901-bcde-234567890123',
+  'b2c3d4e5-f6a7-8901-bcde-f23456789012',
   'Biodigestor Residuos Agroindustriais - Fase 1',
   'Instalacao de biodigestor para tratamento de residuos agroindustriais com geracao de biogas e biofertilizante. Projeto piloto em parceria com produtores rurais da regiao de Joinville.',
   'AMBIENTAL',
