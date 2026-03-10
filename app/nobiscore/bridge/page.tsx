@@ -12,9 +12,11 @@ import {
   Sparkles,
   Copy,
   ExternalLink,
-  AlertCircle
+  AlertCircle,
+  Heart,
+  Leaf
 } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { 
@@ -24,61 +26,61 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import useSWR from "swr"
 
-// Mock impact tokens
-const impactTokens = [
-  { id: "plastic-001", name: "Plastic Recycled", symbol: "PLST", balance: "2.5", unit: "Tons", contractAddress: "0x7a25...F2488D" },
-  { id: "organic-002", name: "Organic Waste", symbol: "ORGW", balance: "1.8", unit: "Tons", contractAddress: "0x3c44...a0F2e5" },
-  { id: "ewaste-003", name: "E-Waste Processed", symbol: "EWST", balance: "320", unit: "kg", contractAddress: "0x90F7...D38c4b" },
-  { id: "carbon-004", name: "Carbon Offset", symbol: "CO2E", balance: "5.2", unit: "tCO2e", contractAddress: "0x15d3...8E91a2" },
-]
+const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 type BridgeStep = "select" | "confirm" | "burning" | "generating" | "minting" | "complete"
 
 const steps = [
-  { id: "burning", label: "Burning Polygon Tokens", description: "Destroying tokens on source chain" },
-  { id: "generating", label: "Generating Proof", description: "Creating cryptographic attestation" },
-  { id: "minting", label: "Minting Inscription", description: "Recording on Bitcoin blockchain" },
+  { id: "burning", label: "Queimando Tokens", description: "Destruindo tokens na Polygon" },
+  { id: "generating", label: "Gerando Prova", description: "Criando atestação criptográfica" },
+  { id: "minting", label: "Mintando Inscription", description: "Registrando no Bitcoin" },
 ]
 
 export default function TheBridgePage() {
-  const [selectedToken, setSelectedToken] = useState<string>("")
-  const [amount, setAmount] = useState<string>("")
+  const [selectedIacId, setSelectedIacId] = useState<string>("")
   const [step, setStep] = useState<BridgeStep>("select")
   const [currentProcessStep, setCurrentProcessStep] = useState(0)
+  const [resultInscriptionId, setResultInscriptionId] = useState<string>("")
 
-  const selectedTokenData = impactTokens.find(t => t.id === selectedToken)
-  const maxAmount = selectedTokenData ? parseFloat(selectedTokenData.balance) : 0
+  const { data, isLoading } = useSWR("/api/nobiscore/assets", fetcher)
+  const eligibleIacs = data?.eligibleForBridge || []
+  
+  const selectedIac = eligibleIacs.find((iac: any) => iac.id === selectedIacId)
 
   const handleStartBridge = async () => {
-    if (!selectedToken || !amount) return
+    if (!selectedIacId) return
     
     setStep("burning")
     setCurrentProcessStep(0)
     
-    // Simulate burning process
+    // Simular processo de burning (em produção seria uma chamada real à API)
     await new Promise(resolve => setTimeout(resolve, 3000))
     setCurrentProcessStep(1)
     setStep("generating")
     
-    // Simulate proof generation
+    // Simular geração de prova
     await new Promise(resolve => setTimeout(resolve, 2500))
     setCurrentProcessStep(2)
     setStep("minting")
     
-    // Simulate minting
+    // Simular minting (em produção seria o registro real no Bitcoin)
     await new Promise(resolve => setTimeout(resolve, 4000))
+    
+    // Gerar um inscription ID fictício para demonstração
+    const inscriptionId = `${Date.now().toString(16)}i0`
+    setResultInscriptionId(inscriptionId)
     setStep("complete")
   }
 
   const resetBridge = () => {
     setStep("select")
-    setSelectedToken("")
-    setAmount("")
+    setSelectedIacId("")
     setCurrentProcessStep(0)
+    setResultInscriptionId("")
   }
 
   return (
@@ -87,7 +89,7 @@ export default function TheBridgePage() {
       <div>
         <h1 className="text-3xl font-bold text-white tracking-tight">The Bridge</h1>
         <p className="text-neutral-400 mt-2">
-          Transform your Polygon impact tokens into permanent Bitcoin Inscriptions
+          Transforme seus IACs validados na Polygon em Inscriptions permanentes no Bitcoin
         </p>
       </div>
 
@@ -140,138 +142,172 @@ export default function TheBridgePage() {
           )}
 
           <div className="p-8">
-            {/* Step 1: Select Token */}
+            {/* Step 1: Select IAC */}
             {step === "select" && (
               <div className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Source Chain */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-purple-500/10 rounded-lg">
-                        <Hexagon className="w-5 h-5 text-purple-400" />
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-8 h-8 animate-spin text-neutral-500" />
+                  </div>
+                ) : eligibleIacs.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Hexagon className="w-16 h-16 text-neutral-700 mx-auto mb-4" />
+                    <h3 className="text-white text-lg font-medium">Nenhum IAC elegível</h3>
+                    <p className="text-neutral-500 mt-2 max-w-md mx-auto">
+                      Para fazer bridge, você precisa ter IACs validados e registrados na Polygon. 
+                      Complete o processo de validação VCA primeiro.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Source Chain */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 bg-purple-500/10 rounded-lg">
+                          <Hexagon className="w-5 h-5 text-purple-400" />
+                        </div>
+                        <div>
+                          <p className="text-white font-medium">Origem</p>
+                          <p className="text-xs text-neutral-500">Polygon Network</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-white font-medium">Source Chain</p>
-                        <p className="text-xs text-neutral-500">Polygon Network</p>
-                      </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label className="text-neutral-400">Select Impact Token</Label>
-                      <Select value={selectedToken} onValueChange={setSelectedToken}>
-                        <SelectTrigger className="bg-neutral-800 border-neutral-700 text-white h-14">
-                          <SelectValue placeholder="Choose a token to bridge" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-neutral-800 border-neutral-700">
-                          {impactTokens.map((token) => (
-                            <SelectItem 
-                              key={token.id} 
-                              value={token.id}
-                              className="text-white focus:bg-neutral-700 focus:text-white"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                                  <Hexagon className="w-4 h-4 text-purple-400" />
-                                </div>
-                                <div>
-                                  <p className="font-medium">{token.name}</p>
-                                  <p className="text-xs text-neutral-400">
-                                    Balance: {token.balance} {token.unit}
-                                  </p>
-                                </div>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {selectedTokenData && (
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-neutral-400">Amount</Label>
-                          <button 
-                            onClick={() => setAmount(selectedTokenData.balance)}
-                            className="text-xs text-purple-400 hover:text-purple-300"
-                          >
-                            MAX
-                          </button>
+                        <Label className="text-neutral-400">Selecione o IAC para Bridge</Label>
+                        <Select value={selectedIacId} onValueChange={setSelectedIacId}>
+                          <SelectTrigger className="bg-neutral-800 border-neutral-700 text-white h-14">
+                            <SelectValue placeholder="Escolha um IAC validado" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-neutral-800 border-neutral-700">
+                            {eligibleIacs.map((iac: any) => (
+                              <SelectItem 
+                                key={iac.id} 
+                                value={iac.id}
+                                className="text-white focus:bg-neutral-700 focus:text-white"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className={cn(
+                                    "w-8 h-8 rounded-lg flex items-center justify-center",
+                                    iac.type === "SOCIAL" 
+                                      ? "bg-pink-500/20" 
+                                      : "bg-green-500/20"
+                                  )}>
+                                    {iac.type === "SOCIAL" ? (
+                                      <Heart className="w-4 h-4 text-pink-400" />
+                                    ) : (
+                                      <Leaf className="w-4 h-4 text-green-400" />
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium line-clamp-1">{iac.title}</p>
+                                    <p className="text-xs text-neutral-400">
+                                      {iac.institution_name || iac.category} - Score: {iac.vca_score || "N/A"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {selectedIac && (
+                        <Card className="bg-neutral-800/50 border-neutral-700">
+                          <CardContent className="p-4 space-y-3">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-neutral-400">Tipo</span>
+                              <Badge className={cn(
+                                "text-xs",
+                                selectedIac.type === "SOCIAL" 
+                                  ? "bg-pink-500/20 text-pink-400 border-pink-500/30" 
+                                  : "bg-green-500/20 text-green-400 border-green-500/30"
+                              )}>
+                                {selectedIac.type}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-neutral-400">Instituição</span>
+                              <span className="text-white">{selectedIac.institution_name || "N/A"}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-neutral-400">Local</span>
+                              <span className="text-white">{selectedIac.location_state || "Brasil"}</span>
+                            </div>
+                            {selectedIac.estimated_beneficiaries && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-neutral-400">Beneficiários</span>
+                                <span className="text-white">{selectedIac.estimated_beneficiaries.toLocaleString()}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between text-sm pt-2 border-t border-neutral-700">
+                              <span className="text-neutral-400">Polygon TX</span>
+                              <code className="text-xs text-purple-400 font-mono">
+                                {selectedIac.polygon_tx_hash?.slice(0, 12)}...
+                              </code>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+
+                    {/* Arrow */}
+                    <div className="hidden md:flex items-center justify-center">
+                      <div className="p-4 bg-neutral-800 rounded-full">
+                        <ArrowRight className="w-6 h-6 text-white" />
+                      </div>
+                    </div>
+
+                    {/* Destination Chain */}
+                    <div className="space-y-4 md:-ml-16">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 bg-orange-500/10 rounded-lg">
+                          <Bitcoin className="w-5 h-5 text-orange-400" />
                         </div>
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                            placeholder="0.0"
-                            max={maxAmount}
-                            className="bg-neutral-800 border-neutral-700 text-white text-xl h-14 pr-20"
-                          />
-                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 text-sm">
-                            {selectedTokenData.unit}
-                          </span>
+                        <div>
+                          <p className="text-white font-medium">Destino</p>
+                          <p className="text-xs text-neutral-500">Bitcoin Ordinals</p>
                         </div>
-                        <p className="text-xs text-neutral-500">
-                          Available: {selectedTokenData.balance} {selectedTokenData.unit}
+                      </div>
+
+                      <Card className="bg-neutral-800/50 border-neutral-700">
+                        <CardContent className="p-4">
+                          <p className="text-neutral-400 text-sm mb-3">Você receberá:</p>
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-700 rounded-xl flex items-center justify-center">
+                              <Sparkles className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-white font-medium">NOBIS Impact Inscription</p>
+                              <p className="text-xs text-neutral-500">
+                                {selectedIac 
+                                  ? `${selectedIac.type} - ${selectedIac.title?.slice(0, 30)}...` 
+                                  : "Selecione um IAC acima"}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <div className="flex items-start gap-2 p-3 bg-neutral-800/30 rounded-lg border border-neutral-800">
+                        <Shield className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                        <p className="text-xs text-neutral-400">
+                          Seus dados de impacto serão permanentemente registrados no Bitcoin com prova criptográfica de autenticidade.
                         </p>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Arrow */}
-                  <div className="hidden md:flex items-center justify-center">
-                    <div className="p-4 bg-neutral-800 rounded-full">
-                      <ArrowRight className="w-6 h-6 text-white" />
                     </div>
                   </div>
+                )}
 
-                  {/* Destination Chain */}
-                  <div className="space-y-4 md:-ml-16">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-orange-500/10 rounded-lg">
-                        <Bitcoin className="w-5 h-5 text-orange-400" />
-                      </div>
-                      <div>
-                        <p className="text-white font-medium">Destination Chain</p>
-                        <p className="text-xs text-neutral-500">Bitcoin Ordinals</p>
-                      </div>
-                    </div>
-
-                    <Card className="bg-neutral-800/50 border-neutral-700">
-                      <CardContent className="p-4">
-                        <p className="text-neutral-400 text-sm mb-3">You will receive:</p>
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-700 rounded-xl flex items-center justify-center">
-                            <Sparkles className="w-6 h-6 text-white" />
-                          </div>
-                          <div>
-                            <p className="text-white font-medium">Impact Inscription</p>
-                            <p className="text-xs text-neutral-500">
-                              {selectedTokenData 
-                                ? `${amount || "0"} ${selectedTokenData.unit} ${selectedTokenData.name}` 
-                                : "Select a token above"}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <div className="flex items-start gap-2 p-3 bg-neutral-800/30 rounded-lg border border-neutral-800">
-                      <Shield className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                      <p className="text-xs text-neutral-400">
-                        Your impact data will be permanently recorded on Bitcoin with cryptographic proof of authenticity.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <Button 
-                  onClick={handleStartBridge}
-                  disabled={!selectedToken || !amount || parseFloat(amount) <= 0}
-                  className="w-full h-14 bg-white text-black hover:bg-neutral-200 font-medium text-base"
-                >
-                  <Flame className="w-5 h-5 mr-2" />
-                  Burn & Mint Inscription
-                </Button>
+                {eligibleIacs.length > 0 && (
+                  <Button 
+                    onClick={handleStartBridge}
+                    disabled={!selectedIacId}
+                    className="w-full h-14 bg-white text-black hover:bg-neutral-200 font-medium text-base"
+                  >
+                    <Flame className="w-5 h-5 mr-2" />
+                    Transformar em Inscription
+                  </Button>
+                )}
               </div>
             )}
 
@@ -285,18 +321,18 @@ export default function TheBridgePage() {
                   <div className="absolute -inset-4 border-2 border-orange-500/30 rounded-3xl animate-ping" />
                 </div>
                 <h2 className="text-2xl font-bold text-white mt-8">
-                  {step === "burning" && "Burning Polygon Tokens..."}
-                  {step === "generating" && "Generating Proof..."}
-                  {step === "minting" && "Minting Bitcoin Inscription..."}
+                  {step === "burning" && "Queimando Token na Polygon..."}
+                  {step === "generating" && "Gerando Prova Criptográfica..."}
+                  {step === "minting" && "Mintando Inscription no Bitcoin..."}
                 </h2>
                 <p className="text-neutral-400 mt-2">
-                  {step === "burning" && "Destroying ERC-1155 tokens on Polygon network"}
-                  {step === "generating" && "Creating cryptographic attestation of impact data"}
-                  {step === "minting" && "Recording inscription on Bitcoin blockchain"}
+                  {step === "burning" && "Registrando burn do IAC na Polygon"}
+                  {step === "generating" && "Criando atestação dos dados de impacto"}
+                  {step === "minting" && "Inscrevendo dados permanentemente no Bitcoin"}
                 </p>
                 <div className="flex items-center justify-center gap-2 mt-6 text-neutral-500 text-sm">
                   <AlertCircle className="w-4 h-4" />
-                  <span>Do not close this window</span>
+                  <span>Não feche esta janela</span>
                 </div>
               </div>
             )}
@@ -307,23 +343,28 @@ export default function TheBridgePage() {
                 <div className="w-20 h-20 bg-green-500 rounded-2xl flex items-center justify-center mx-auto">
                   <Check className="w-10 h-10 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold text-white mt-6">Inscription Created!</h2>
+                <h2 className="text-2xl font-bold text-white mt-6">Inscription Criada!</h2>
                 <p className="text-neutral-400 mt-2">
-                  Your impact data has been permanently recorded on Bitcoin
+                  Seu impacto foi permanentemente registrado no Bitcoin
                 </p>
 
                 {/* Result Card */}
                 <Card className="bg-neutral-800/50 border-neutral-700 mt-8 max-w-md mx-auto">
                   <CardContent className="p-6">
                     <div className="w-full aspect-square bg-gradient-to-br from-neutral-800 to-neutral-900 rounded-xl flex items-center justify-center mb-4 border border-neutral-700">
-                      <div className="text-center">
+                      <div className="text-center px-4">
                         <Sparkles className="w-16 h-16 text-orange-400 mx-auto" />
-                        <p className="text-white font-medium mt-4">
-                          {selectedTokenData?.name}
+                        <p className="text-white font-medium mt-4 line-clamp-2">
+                          {selectedIac?.title}
                         </p>
-                        <p className="text-neutral-400 text-sm">
-                          {amount} {selectedTokenData?.unit}
-                        </p>
+                        <Badge className={cn(
+                          "mt-2",
+                          selectedIac?.type === "SOCIAL" 
+                            ? "bg-pink-500/20 text-pink-400" 
+                            : "bg-green-500/20 text-green-400"
+                        )}>
+                          {selectedIac?.type}
+                        </Badge>
                       </div>
                     </div>
                     
@@ -331,19 +372,31 @@ export default function TheBridgePage() {
                       <div className="flex items-center justify-between p-3 bg-neutral-900 rounded-lg">
                         <span className="text-neutral-400 text-sm">Inscription ID</span>
                         <div className="flex items-center gap-2">
-                          <code className="text-orange-400 text-sm font-mono">#67482901</code>
-                          <button className="text-neutral-500 hover:text-white">
+                          <code className="text-orange-400 text-sm font-mono">
+                            {resultInscriptionId.slice(0, 12)}...
+                          </code>
+                          <button 
+                            className="text-neutral-500 hover:text-white"
+                            onClick={() => navigator.clipboard.writeText(resultInscriptionId)}
+                          >
                             <Copy className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
                       <div className="flex items-center justify-between p-3 bg-neutral-900 rounded-lg">
-                        <span className="text-neutral-400 text-sm">Ordinal ID</span>
+                        <span className="text-neutral-400 text-sm">Polygon TX</span>
                         <div className="flex items-center gap-2">
-                          <code className="text-xs text-neutral-300 font-mono">bc1p...9rus</code>
-                          <button className="text-neutral-500 hover:text-white">
+                          <code className="text-xs text-purple-400 font-mono">
+                            {selectedIac?.polygon_tx_hash?.slice(0, 12)}...
+                          </code>
+                          <a 
+                            href={`https://polygonscan.com/tx/${selectedIac?.polygon_tx_hash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-neutral-500 hover:text-white"
+                          >
                             <ExternalLink className="w-4 h-4" />
-                          </button>
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -356,10 +409,13 @@ export default function TheBridgePage() {
                     onClick={resetBridge}
                     className="border-neutral-700 text-white hover:bg-neutral-800"
                   >
-                    Bridge More
+                    Bridge Mais
                   </Button>
-                  <Button className="bg-white text-black hover:bg-neutral-200">
-                    View in Marketplace
+                  <Button 
+                    className="bg-white text-black hover:bg-neutral-200"
+                    asChild
+                  >
+                    <a href="/nobiscore/marketplace">Ver no Marketplace</a>
                   </Button>
                 </div>
               </div>
@@ -376,9 +432,9 @@ export default function TheBridgePage() {
               <div className="p-2 bg-purple-500/10 rounded-lg w-fit mb-3">
                 <Hexagon className="w-5 h-5 text-purple-400" />
               </div>
-              <h3 className="text-white font-medium">ERC-1155 Tokens</h3>
+              <h3 className="text-white font-medium">IACs Validados</h3>
               <p className="text-neutral-500 text-sm mt-1">
-                Your verified impact tokens on Polygon are burned permanently
+                Seus impactos verificados na Polygon são queimados permanentemente
               </p>
             </CardContent>
           </Card>
@@ -387,9 +443,9 @@ export default function TheBridgePage() {
               <div className="p-2 bg-green-500/10 rounded-lg w-fit mb-3">
                 <Shield className="w-5 h-5 text-green-400" />
               </div>
-              <h3 className="text-white font-medium">Cryptographic Proof</h3>
+              <h3 className="text-white font-medium">Prova Criptográfica</h3>
               <p className="text-neutral-500 text-sm mt-1">
-                Zero-knowledge attestation ensures data integrity
+                Atestação zero-knowledge garante integridade dos dados
               </p>
             </CardContent>
           </Card>
@@ -400,7 +456,7 @@ export default function TheBridgePage() {
               </div>
               <h3 className="text-white font-medium">Bitcoin Inscription</h3>
               <p className="text-neutral-500 text-sm mt-1">
-                Immutable record on the most secure blockchain
+                Registro imutável na blockchain mais segura do mundo
               </p>
             </CardContent>
           </Card>
