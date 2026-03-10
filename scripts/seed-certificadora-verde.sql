@@ -80,7 +80,7 @@ INSERT INTO nobiscore_users (
   created_at,
   updated_at
 ) VALUES (
-  'ncce1001-aaaa-bbbb-cccc-ddddeeee0011',
+  '0cce1001-aaaa-bbbb-cccc-ddddeeeeff11',
   'certificacao@verdeconsultoria.com.br',
   '$2b$10$XQxBtVgPVYKPJGqMZX5hYeKzKzKzKzKzKzKzKzKzKzKzKzKzKzKzK',
   'Dr. Ricardo Mendes',
