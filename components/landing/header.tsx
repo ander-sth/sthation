@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Menu, X, Heart, Leaf, ChevronDown } from "lucide-react"
+import { Menu, X, Heart, Leaf, ChevronDown, Zap } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
 export function Header() {
@@ -86,6 +86,15 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
+          <Button 
+            asChild 
+            className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold rounded-full px-5 shadow-lg shadow-red-900/30 border border-red-400/20 transition-all hover:scale-105"
+          >
+            <Link href="/nobiscore" className="flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              NobisCore
+            </Link>
+          </Button>
           {user ? (
             <Button asChild className="bg-teal-500 hover:bg-teal-400 text-[#0a2f2f] font-bold rounded-full px-6">
               <Link href="/dashboard">Dashboard</Link>
@@ -157,6 +166,15 @@ export function Header() {
             >
               Sthation Gov
             </Link>
+            <Button 
+              asChild 
+              className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold rounded-full shadow-lg shadow-red-900/30"
+            >
+              <Link href="/nobiscore" className="flex items-center justify-center gap-2" onClick={() => setIsOpen(false)}>
+                <Zap className="h-4 w-4" />
+                NobisCore
+              </Link>
+            </Button>
             <hr className="border-teal-400/20" />
             {user ? (
               <Button asChild className="w-full bg-teal-500 hover:bg-teal-400 text-[#0a2f2f] font-bold rounded-full">
