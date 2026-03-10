@@ -59,11 +59,11 @@ export default function NobisCoreLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-white text-black">
       {/* Header */}
-      <header className="border-b border-white/10">
+      <header className="border-b border-black/10">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/nobiscore" className="flex items-center gap-2 text-white/60 hover:text-white transition-colors w-fit">
+          <Link href="/nobiscore" className="flex items-center gap-2 text-black/60 hover:text-black transition-colors w-fit">
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </Link>
@@ -76,12 +76,12 @@ export default function NobisCoreLoginPage() {
           {/* Logo */}
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold tracking-tight mb-2">NobisCore</h1>
-            <p className="text-white/60">Acesse sua conta</p>
+            <p className="text-black/60">Acesse sua conta</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-white/80">Email</Label>
+              <Label htmlFor="email" className="text-black/80">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -89,12 +89,12 @@ export default function NobisCoreLoginPage() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="seu@email.com"
                 required
-                className="bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-white/40"
+                className="bg-black/5 border-black/20 text-black placeholder:text-black/40 focus:border-black/40"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-white/80">Senha</Label>
+              <Label htmlFor="password" className="text-black/80">Senha</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -103,12 +103,12 @@ export default function NobisCoreLoginPage() {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Sua senha"
                   required
-                  className="bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-white/40 pr-10"
+                  className="bg-black/5 border-black/20 text-black placeholder:text-black/40 focus:border-black/40 pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -118,7 +118,7 @@ export default function NobisCoreLoginPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-white text-black hover:bg-white/90 font-medium"
+              className="w-full bg-black text-white hover:bg-black/90 font-medium"
             >
               {isLoading ? (
                 <>
@@ -132,9 +132,9 @@ export default function NobisCoreLoginPage() {
           </form>
 
           <div className="mt-8 text-center">
-            <p className="text-white/60">
+            <p className="text-black/60">
               Ainda nao tem conta?{" "}
-              <Link href="/nobiscore/cadastro" className="text-white hover:underline">
+              <Link href="/nobiscore/cadastro" className="text-black font-medium hover:underline">
                 Criar conta
               </Link>
             </p>
@@ -142,13 +142,13 @@ export default function NobisCoreLoginPage() {
 
           {/* Divider */}
           <div className="my-8 flex items-center gap-4">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-white/40 text-sm">ou</span>
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px bg-black/10" />
+            <span className="text-black/40 text-sm">ou</span>
+            <div className="flex-1 h-px bg-black/10" />
           </div>
 
           {/* Info */}
-          <div className="text-center text-sm text-white/40">
+          <div className="text-center text-sm text-black/40">
             <p>O NobisCore e a plataforma de tokenizacao de impacto da Sthation.</p>
             <p className="mt-2">Transforme seus tokens de impacto em Inscriptions imutaveis no Bitcoin.</p>
           </div>
