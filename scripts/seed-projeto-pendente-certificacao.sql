@@ -59,10 +59,10 @@ INSERT INTO impact_action_cards (
 
 -- 2. Adicionar evidencias do projeto
 INSERT INTO evidences (id, iac_id, type, description, url, content_hash, captured_at, gps_lat, gps_lng, created_at) VALUES
-  ('eebb0001-aaaa-bbbb-cccc-ddddeeee0001', 'aabbccdd-1111-2222-3333-444455556666', 'PHOTO', 'Instalacao biodigestor', '/img/bio1.jpg', 'h1', '2026-03-05 09:00:00', -26.3045, -48.8500, NOW()),
-  ('eebb0002-aaaa-bbbb-cccc-ddddeeee0002', 'aabbccdd-1111-2222-3333-444455556666', 'PHOTO', 'Sistema captacao', '/img/bio2.jpg', 'h2', '2026-03-08 14:00:00', -26.3045, -48.8500, NOW()),
-  ('eebb0003-aaaa-bbbb-cccc-ddddeeee0003', 'aabbccdd-1111-2222-3333-444455556666', 'SENSOR', 'Dados producao', '/data/biogas.json', 'h3', '2026-03-10 18:00:00', -26.3045, -48.8500, NOW()),
-  ('eebb0004-aaaa-bbbb-cccc-ddddeeee0004', 'aabbccdd-1111-2222-3333-444455556666', 'DOCUMENT', 'Relatorio tecnico', '/docs/bio.pdf', 'h4', '2026-03-10 20:00:00', -26.3045, -48.8500, NOW())
+  ('eebb0001-aaaa-bbbb-cccc-ddddeeeeff01', 'aabbccdd-1111-2222-3333-444455556666', 'PHOTO', 'Instalacao biodigestor', '/img/bio1.jpg', 'h1', '2026-03-05 09:00:00', -26.3045, -48.8500, NOW()),
+  ('eebb0002-aaaa-bbbb-cccc-ddddeeeeff02', 'aabbccdd-1111-2222-3333-444455556666', 'PHOTO', 'Sistema captacao', '/img/bio2.jpg', 'h2', '2026-03-08 14:00:00', -26.3045, -48.8500, NOW()),
+  ('eebb0003-aaaa-bbbb-cccc-ddddeeeeff03', 'aabbccdd-1111-2222-3333-444455556666', 'SENSOR', 'Dados producao', '/data/biogas.json', 'h3', '2026-03-10 18:00:00', -26.3045, -48.8500, NOW()),
+  ('eebb0004-aaaa-bbbb-cccc-ddddeeeeff04', 'aabbccdd-1111-2222-3333-444455556666', 'DOCUMENT', 'Relatorio tecnico', '/docs/bio.pdf', 'h4', '2026-03-10 20:00:00', -26.3045, -48.8500, NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- 3. Criar pipeline_trail para rastrear o progresso
@@ -79,7 +79,7 @@ INSERT INTO pipeline_trails (
   created_at,
   updated_at
 ) VALUES (
-  'ttbb0001-aaaa-bbbb-cccc-ddddeeee0001',
+  '0fbb0001-aaaa-bbbb-cccc-ddddeeeeff05',
   'TRAIL-BIO-2026-001',
   'aabbccdd-1111-2222-3333-444455556666',
   'AMBIENTAL',
@@ -101,7 +101,7 @@ INSERT INTO technical_reviews (
   tco2e_estimated,
   created_at
 ) VALUES (
-  'ttrv0001-aaaa-bbbb-cccc-ddddeeee0001',
+  '0fcc0001-aaaa-bbbb-cccc-ddddeeeeff06',
   'aabbccdd-1111-2222-3333-444455556666',
   'PENDING',
   'CDM AMS-III.D',
