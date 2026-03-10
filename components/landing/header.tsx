@@ -90,7 +90,7 @@ export function Header() {
             asChild 
             className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold rounded-full px-5 shadow-lg shadow-red-900/30 border border-red-400/20 transition-all hover:scale-105"
           >
-            <Link href="/nobiscore" className="flex items-center gap-2">
+            <Link href="/nobiscore/welcome" className="flex items-center gap-2">
               <Zap className="h-4 w-4" />
               NobisCore
             </Link>
@@ -170,7 +170,7 @@ export function Header() {
               asChild 
               className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold rounded-full shadow-lg shadow-red-900/30"
             >
-              <Link href="/nobiscore" className="flex items-center justify-center gap-2" onClick={() => setIsOpen(false)}>
+              <Link href="/nobiscore/welcome" className="flex items-center justify-center gap-2" onClick={() => setIsOpen(false)}>
                 <Zap className="h-4 w-4" />
                 NobisCore
               </Link>
