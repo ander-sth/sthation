@@ -122,11 +122,9 @@ export async function GET(request: NextRequest) {
 
     // Filtrar por status se especificado
     if (status) {
-      console.log("[v0] Filtering by status:", status, "Projects before:", projects.length, projects.map((p: any) => ({ title: p.title, status: p.status })))
       projects = projects.filter((p: any) => 
         p.status?.toUpperCase() === status.toUpperCase()
       )
-      console.log("[v0] Projects after filter:", projects.length)
     }
 
     // Filtrar por instituição se especificado

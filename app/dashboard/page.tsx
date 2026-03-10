@@ -474,8 +474,13 @@ function ValidationHistory() {
 }
 
 function TechnicalDisputes() {
-  const { data, isLoading } = useApiData<any[]>("/api/iac?type=AMBIENTAL&status=SUBMITTED&limit=5", {})
+  const { data, isLoading, error } = useApiData<{ projects: any[], total: number }>("/api/iac?type=AMBIENTAL&status=SUBMITTED&limit=10", {
+    revalidateOnFocus: true
+  })
   const projects = data?.projects || []
+  
+  // Debug temporário
+  console.log("[v0] TechnicalDisputes - data:", data, "isLoading:", isLoading, "error:", error, "projects:", projects)
 
   return (
     <Card className="border-border bg-card">
