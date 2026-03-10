@@ -137,28 +137,40 @@ export default function NobisCoreDashboardLayout({
 
   useEffect(() => {
     // Verificar se usuário está logado no NobisCore (sistema independente)
-    const token = localStorage.getItem("nobiscore_token")
-    const userData = localStorage.getItem("nobiscore_user")
+    const checkAuth = () => {
+      const token = localStorage.getItem("nobiscore_token")
+      const userData = localStorage.getItem("nobiscore_user")
 
-    if (!token || !userData) {
-      router.push("/nobiscore/login")
-      return
+      console.log("[v0] NobisCore Auth Check - Token:", !!token, "UserData:", !!userData)
+
+      if (!token || !userData) {
+        console.log("[v0] NobisCore - Redirecionando para login")
+        window.location.href = "/nobiscore/login"
+        return
+      }
+
+      try {
+        const parsedUser = JSON.parse(userData)
+        console.log("[v0] NobisCore - Usuario logado:", parsedUser.email)
+        setUser(parsedUser)
+      } catch (e) {
+        console.log("[v0] NobisCore - Erro ao parsear usuario, redirecionando")
+        localStorage.removeItem("nobiscore_token")
+        localStorage.removeItem("nobiscore_user")
+        window.location.href = "/nobiscore/login"
+        return
+      }
+
+      // Carregar carteiras conectadas (se houver)
+      const evm = localStorage.getItem("nobiscore_evm_address")
+      const btc = localStorage.getItem("nobiscore_btc_address")
+      setEvmAddress(evm)
+      setBtcAddress(btc)
+      setIsLoading(false)
     }
 
-    try {
-      setUser(JSON.parse(userData))
-    } catch {
-      router.push("/nobiscore/login")
-      return
-    }
-
-    // Carregar carteiras conectadas (se houver)
-    const evm = localStorage.getItem("nobiscore_evm_address")
-    const btc = localStorage.getItem("nobiscore_btc_address")
-    setEvmAddress(evm)
-    setBtcAddress(btc)
-    setIsLoading(false)
-  }, [router])
+    checkAuth()
+  }, [])
 
   const handleLogout = () => {
     localStorage.removeItem("nobiscore_token")

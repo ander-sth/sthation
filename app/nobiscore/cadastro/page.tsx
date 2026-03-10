@@ -49,11 +49,13 @@ export default function NobisCoreCadastroPage() {
       if (res.ok && data.success) {
         localStorage.setItem("nobiscore_token", data.token)
         localStorage.setItem("nobiscore_user", JSON.stringify(data.user))
+        console.log("[v0] NobisCore Cadastro - Sucesso, redirecionando para dashboard")
         toast({
           title: "Conta criada!",
           description: "Bem-vindo ao NobisCore!",
         })
-        router.push("/nobiscore/dashboard")
+        // Usar window.location para garantir redirecionamento correto
+        window.location.href = "/nobiscore/dashboard"
       } else {
         toast({
           title: "Erro no cadastro",
