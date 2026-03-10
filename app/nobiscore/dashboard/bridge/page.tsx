@@ -415,7 +415,7 @@ export default function TheBridgePage() {
                     className="bg-white text-black hover:bg-neutral-200"
                     asChild
                   >
-                    <a href="/nobiscore/marketplace">Ver no Marketplace</a>
+                    <a href="/nobiscore/dashboard/marketplace">Ver no Marketplace</a>
                   </Button>
                 </div>
               </div>

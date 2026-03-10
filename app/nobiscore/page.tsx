@@ -1,405 +1,383 @@
 "use client"
 
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 import { 
-  Flame, 
-  TrendingUp, 
-  Wallet, 
-  ArrowUpRight, 
-  ArrowDownRight,
-  Hexagon,
+  Zap, 
+  ArrowRight, 
+  Shield, 
+  Globe, 
+  Layers,
   Bitcoin,
-  Activity,
-  Clock,
+  Hexagon,
+  ChevronRight,
   Leaf,
   Heart,
-  Loader2
+  CheckCircle2,
+  TrendingUp,
+  Lock,
+  Sparkles
 } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
 import useSWR from "swr"
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
-function StatCard({ 
-  title, 
-  value, 
-  subtitle, 
-  icon: Icon, 
-  trend,
-  loading = false
-}: { 
-  title: string
-  value: string
-  subtitle: string
-  icon: React.ElementType
-  trend?: "up" | "down"
-  loading?: boolean
-}) {
-  return (
-    <Card className="bg-neutral-900 border-neutral-800 hover:border-neutral-700 transition-colors">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-neutral-500 text-sm font-medium">{title}</p>
-            {loading ? (
-              <div className="flex items-center gap-2 mt-2">
-                <Loader2 className="w-5 h-5 animate-spin text-neutral-500" />
-              </div>
-            ) : (
-              <>
-                <p className="text-3xl font-bold text-white mt-1 tracking-tight">{value}</p>
-                <div className="flex items-center gap-1 mt-2">
-                  {trend && (
-                    trend === "up" ? (
-                      <ArrowUpRight className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <ArrowDownRight className="w-4 h-4 text-red-500" />
-                    )
-                  )}
-                  <span className={`text-xs ${trend === "up" ? "text-green-500" : trend === "down" ? "text-red-500" : "text-neutral-500"}`}>
-                    {subtitle}
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
-          <div className="p-3 bg-neutral-800 rounded-xl">
-            <Icon className="w-5 h-5 text-white" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function ActivityItem({ 
-  title,
-  type, 
-  status, 
-  inscriptionId, 
-  polygonTxHash,
-  time,
-  category
-}: { 
-  title: string
-  type: string
-  status: string
-  inscriptionId?: string
-  polygonTxHash?: string
-  time: string
-  category?: string
-}) {
-  const getIcon = () => {
-    switch (type) {
-      case "SOCIAL": return <Heart className="w-4 h-4 text-pink-400" />
-      case "AMBIENTAL": return <Leaf className="w-4 h-4 text-green-400" />
-      default: return <Activity className="w-4 h-4" />
-    }
-  }
-
-  const getStatusColor = () => {
-    switch (status) {
-      case "MINTED": 
-      case "COMPLETED": 
-        return "bg-green-500/10 text-green-400 border-green-500/20"
-      case "VALIDATED": 
-      case "REGISTERED": 
-        return "bg-blue-500/10 text-blue-400 border-blue-500/20"
-      case "PENDING":
-      case "IN_VCA":
-        return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-      default: return "bg-neutral-500/10 text-neutral-400 border-neutral-500/20"
-    }
-  }
-
-  const displayHash = inscriptionId 
-    ? `${inscriptionId.slice(0, 8)}...${inscriptionId.slice(-6)}`
-    : polygonTxHash 
-      ? `${polygonTxHash.slice(0, 8)}...${polygonTxHash.slice(-4)}`
-      : "Aguardando..."
+export default function NobisCoreLanding() {
+  const { data: stats } = useSWR("/api/nobiscore/stats", fetcher)
 
   return (
-    <div className="flex items-center justify-between py-4 border-b border-neutral-800 last:border-0">
-      <div className="flex items-center gap-4">
-        <div className="p-2 bg-neutral-800 rounded-lg">
-          {getIcon()}
-        </div>
-        <div>
-          <p className="text-white font-medium text-sm line-clamp-1">{title}</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <code className="text-xs text-neutral-500 font-mono">{displayHash}</code>
-            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusColor()}`}>
-              {status}
-            </Badge>
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-black/80 backdrop-blur-xl">
+        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/nobiscore" className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
+              <Zap className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-xl font-bold tracking-tight">NobisCore</span>
+              <span className="text-xs text-white/40">by STHATION</span>
+            </div>
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-8">
+            <a href="#como-funciona" className="text-sm text-white/60 hover:text-white transition-colors">
+              Como Funciona
+            </a>
+            <a href="#beneficios" className="text-sm text-white/60 hover:text-white transition-colors">
+              Benefícios
+            </a>
+            <a href="#tecnologia" className="text-sm text-white/60 hover:text-white transition-colors">
+              Tecnologia
+            </a>
+          </nav>
+
+          <div className="flex items-center gap-3">
+            <Link href="/">
+              <Button variant="ghost" className="text-white/60 hover:text-white hover:bg-white/10">
+                Voltar à Sthation
+              </Button>
+            </Link>
+            <Link href="/nobiscore/connect">
+              <Button className="bg-white text-black hover:bg-white/90 font-semibold rounded-full px-6">
+                Conectar Carteira
+              </Button>
+            </Link>
           </div>
         </div>
-      </div>
-      <div className="flex items-center gap-2 text-neutral-500">
-        <Clock className="w-3 h-3" />
-        <span className="text-xs">{time}</span>
-      </div>
-    </div>
-  )
-}
+      </header>
 
-function formatTimeAgo(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMins / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffMins < 60) return `${diffMins}m atrás`
-  if (diffHours < 24) return `${diffHours}h atrás`
-  if (diffDays < 7) return `${diffDays}d atrás`
-  return date.toLocaleDateString("pt-BR")
-}
-
-export default function NobisCoreDashboard() {
-  const { data: stats, isLoading: loadingStats } = useSWR("/api/nobiscore/stats", fetcher)
-  const { data: assets } = useSWR("/api/nobiscore/assets", fetcher)
-
-  const recentActivity = stats?.recentActivity || []
-  const pipelineTrails = stats?.pipelineTrails || []
-  const eligibleTokens = assets?.eligibleForBridge || []
-
-  return (
-    <div className="space-y-8">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-800 border border-neutral-800 p-8">
-        <div className="relative z-10">
-          <Badge variant="outline" className="border-neutral-700 text-neutral-400 mb-4">
-            Waste-to-Value Protocol
-          </Badge>
-          <h1 className="text-4xl font-bold text-white tracking-tight">
-            Transform Impact into
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-neutral-300 to-neutral-500">
-              Permanent Value
-            </span>
-          </h1>
-          <p className="text-neutral-400 mt-4 max-w-lg">
-            Bridge your verified environmental impact tokens from Polygon to Bitcoin Ordinals. 
-            Create immutable, tradeable Inscriptions backed by real-world impact data.
-          </p>
-          <div className="flex gap-3 mt-6">
-            <Link href="/nobiscore/bridge">
-              <Button className="bg-white text-black hover:bg-neutral-200 font-medium">
-                <Flame className="w-4 h-4 mr-2" />
-                Start Bridging
-              </Button>
-            </Link>
-            <Link href="/nobiscore/marketplace">
-              <Button variant="outline" className="border-neutral-700 text-white hover:bg-neutral-800">
-                Explore Marketplace
-              </Button>
-            </Link>
+      <section className="pt-32 pb-20 px-6 relative overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
+        </div>
+
+        <div className="container mx-auto max-w-6xl relative z-10">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8">
+              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-sm text-white/60">Polygon - Bitcoin Bridge</span>
+            </div>
+            
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
+              Transforme Impacto em
+              <br />
+              <span className="bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent">
+                Inscriptions Bitcoin
+              </span>
+            </h1>
+            
+            <p className="text-xl text-white/60 max-w-2xl mx-auto mb-10 leading-relaxed">
+              A ponte que conecta seus tokens de impacto social e ambiental da Polygon 
+              para inscriptions imutáveis no Bitcoin. Eternize seu legado na blockchain mais segura do mundo.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link href="/nobiscore/connect">
+                <Button size="lg" className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-full px-8 h-14 text-lg shadow-lg shadow-red-500/25">
+                  Conectar Carteira
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              <a href="#como-funciona">
+                <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 rounded-full px-8 h-14 text-lg">
+                  Saiba Mais
+                </Button>
+              </a>
+            </div>
+          </div>
+
+          {/* Stats - Dados Reais */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20">
+            {[
+              { label: "IACs Registrados", value: stats?.totalOnPolygon || 0, icon: Layers },
+              { label: "Inscriptions Criadas", value: stats?.totalInscriptions || 0, icon: Bitcoin },
+              { label: "Beneficiários", value: stats?.totalBeneficiaries?.toLocaleString("pt-BR") || 0, icon: Heart },
+              { label: "Impactos Validados", value: (stats?.socialCount || 0) + (stats?.environmentalCount || 0), icon: Leaf },
+            ].map((stat, i) => (
+              <div key={i} className="text-center p-6 rounded-2xl bg-white/5 border border-white/10">
+                <stat.icon className="h-6 w-6 mx-auto mb-3 text-white/40" />
+                <div className="text-3xl font-bold mb-1">{stat.value}</div>
+                <div className="text-sm text-white/40">{stat.label}</div>
+              </div>
+            ))}
           </div>
         </div>
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 w-1/2 h-full opacity-10">
-          <div className="absolute right-10 top-10 w-32 h-32 border border-white/20 rounded-full" />
-          <div className="absolute right-20 top-20 w-48 h-48 border border-white/10 rounded-full" />
-          <div className="absolute right-5 top-5 w-64 h-64 border border-white/5 rounded-full" />
-        </div>
-      </div>
+      </section>
 
-      {/* Stats Grid - Dados Reais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          title="Total na Polygon" 
-          value={stats?.totalOnPolygon?.toString() || "0"} 
-          subtitle="IACs registrados"
-          icon={Wallet}
-          loading={loadingStats}
-        />
-        <StatCard 
-          title="Inscriptions Bitcoin" 
-          value={stats?.totalInscriptions?.toString() || "0"} 
-          subtitle="Ordinals mintados"
-          icon={Bitcoin}
-          loading={loadingStats}
-        />
-        <StatCard 
-          title="Impacto Social" 
-          value={stats?.socialCount?.toString() || "0"} 
-          subtitle={`${stats?.totalBeneficiaries?.toLocaleString() || 0} beneficiários`}
-          icon={Heart}
-          loading={loadingStats}
-        />
-        <StatCard 
-          title="Impacto Ambiental" 
-          value={stats?.environmentalCount?.toString() || "0"} 
-          subtitle="Projetos validados"
-          icon={Leaf}
-          loading={loadingStats}
-        />
-      </div>
+      {/* Como Funciona */}
+      <section id="como-funciona" className="py-24 px-6 bg-white/[0.02]">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-4">Como Funciona</h2>
+            <p className="text-white/60 max-w-xl mx-auto">
+              Em três passos simples, transforme seus tokens de impacto em ativos permanentes no Bitcoin
+            </p>
+          </div>
 
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Impact Tokens - Elegíveis para Bridge */}
-        <Card className="lg:col-span-2 bg-neutral-900 border-neutral-800">
-          <CardHeader>
-            <CardTitle className="text-white">IACs Elegíveis para Bridge</CardTitle>
-            <CardDescription className="text-neutral-500">
-              Impactos validados na Polygon prontos para transformação em Ordinals
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {eligibleTokens.length === 0 ? (
-              <div className="text-center py-8">
-                <Hexagon className="w-12 h-12 text-neutral-700 mx-auto mb-3" />
-                <p className="text-neutral-500">Nenhum IAC elegível para bridge no momento</p>
-                <p className="text-neutral-600 text-sm mt-1">
-                  IACs precisam ser validados e registrados na Polygon primeiro
-                </p>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                step: "01",
+                title: "Conecte suas Carteiras",
+                description: "Conecte sua carteira EVM (MetaMask) para Polygon e sua carteira Bitcoin (Xverse, Unisat) para receber inscriptions.",
+                icon: Lock,
+                color: "from-purple-500 to-purple-600"
+              },
+              {
+                step: "02", 
+                title: "Selecione seus Tokens",
+                description: "Escolha os tokens de impacto (IACs) que deseja transformar em inscriptions permanentes no Bitcoin.",
+                icon: Layers,
+                color: "from-red-500 to-red-600"
+              },
+              {
+                step: "03",
+                title: "Burn & Mint",
+                description: "O token é queimado na Polygon e uma inscription é gerada no Bitcoin com todos os dados de impacto.",
+                icon: Sparkles,
+                color: "from-orange-500 to-orange-600"
+              }
+            ].map((item, i) => (
+              <div key={i} className="relative p-8 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-colors group">
+                <div className="absolute -top-4 -right-4 text-6xl font-bold text-white/5 group-hover:text-white/10 transition-colors">
+                  {item.step}
+                </div>
+                <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${item.color} mb-6`}>
+                  <item.icon className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
+                <p className="text-white/60 leading-relaxed">{item.description}</p>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {eligibleTokens.slice(0, 5).map((iac: any) => (
-                  <div 
-                    key={iac.id}
-                    className="flex items-center justify-between p-4 bg-neutral-800/50 rounded-xl border border-neutral-800 hover:border-neutral-700 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        iac.type === 'SOCIAL' 
-                          ? 'bg-gradient-to-br from-pink-600 to-pink-800' 
-                          : 'bg-gradient-to-br from-green-600 to-green-800'
-                      }`}>
-                        {iac.type === 'SOCIAL' ? (
-                          <Heart className="w-6 h-6 text-white" />
-                        ) : (
-                          <Leaf className="w-6 h-6 text-white" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-white font-medium line-clamp-1">{iac.title}</p>
-                        <p className="text-neutral-500 text-sm">{iac.institution_name || iac.category}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      {iac.vca_score && (
-                        <p className="text-white font-medium">Score {iac.vca_score}</p>
-                      )}
-                      <Badge variant="outline" className="border-purple-500/30 text-purple-400 text-xs mt-1">
-                        Polygon
-                      </Badge>
-                    </div>
+            ))}
+          </div>
+
+          {/* Flow Diagram */}
+          <div className="mt-16 p-8 rounded-2xl bg-white/5 border border-white/10">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-2xl bg-purple-500/20 flex items-center justify-center">
+                  <Hexagon className="h-8 w-8 text-purple-400" />
+                </div>
+                <div>
+                  <div className="text-sm text-white/40">Origem</div>
+                  <div className="font-semibold">Polygon (ERC-1155)</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-white/40">
+                <div className="h-px w-12 bg-gradient-to-r from-purple-500 to-red-500 hidden md:block" />
+                <ChevronRight className="h-5 w-5" />
+                <span className="text-sm">Burn</span>
+                <ChevronRight className="h-5 w-5" />
+                <div className="h-px w-12 bg-gradient-to-r from-red-500 to-orange-500 hidden md:block" />
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-2xl bg-red-500/20 flex items-center justify-center">
+                  <Zap className="h-8 w-8 text-red-400" />
+                </div>
+                <div>
+                  <div className="text-sm text-white/40">Processamento</div>
+                  <div className="font-semibold">NobisCore Bridge</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-white/40">
+                <div className="h-px w-12 bg-gradient-to-r from-red-500 to-orange-500 hidden md:block" />
+                <ChevronRight className="h-5 w-5" />
+                <span className="text-sm">Mint</span>
+                <ChevronRight className="h-5 w-5" />
+                <div className="h-px w-12 bg-gradient-to-r from-orange-500 to-yellow-500 hidden md:block" />
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-2xl bg-orange-500/20 flex items-center justify-center">
+                  <Bitcoin className="h-8 w-8 text-orange-400" />
+                </div>
+                <div>
+                  <div className="text-sm text-white/40">Destino</div>
+                  <div className="font-semibold">Bitcoin (Inscription)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Benefícios */}
+      <section id="beneficios" className="py-24 px-6">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-4">Por que Inscriptions?</h2>
+            <p className="text-white/60 max-w-xl mx-auto">
+              A segurança e imutabilidade do Bitcoin para certificar impacto real
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {[
+              {
+                icon: Shield,
+                title: "Imutável e Permanente",
+                description: "Inscriptions são gravadas diretamente no Bitcoin, a blockchain mais segura e descentralizada do mundo. Seus dados de impacto existirão para sempre."
+              },
+              {
+                icon: Globe,
+                title: "Reconhecimento Global",
+                description: "Inscriptions Bitcoin são reconhecidas mundialmente. Seu impacto ganha visibilidade e credibilidade em qualquer lugar do planeta."
+              },
+              {
+                icon: TrendingUp,
+                title: "Valorização Real",
+                description: "Diferente de tokens inflacionários, inscriptions são ativos escassos com potencial de valorização baseado em seu impacto real."
+              },
+              {
+                icon: CheckCircle2,
+                title: "Auditável e Transparente",
+                description: "Qualquer pessoa pode verificar a autenticidade e os dados de impacto diretamente na blockchain Bitcoin."
+              }
+            ].map((benefit, i) => (
+              <div key={i} className="flex gap-6 p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-colors">
+                <div className="shrink-0">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center">
+                    <benefit.icon className="h-6 w-6 text-red-400" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">{benefit.title}</h3>
+                  <p className="text-white/60 leading-relaxed">{benefit.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Tecnologia */}
+      <section id="tecnologia" className="py-24 px-6 bg-white/[0.02]">
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-4xl font-bold mb-6">Tecnologia de Ponta</h2>
+              <p className="text-white/60 mb-8 leading-relaxed">
+                NobisCore utiliza a infraestrutura mais avançada para garantir 
+                segurança, velocidade e confiabilidade em cada transação.
+              </p>
+
+              <div className="space-y-4">
+                {[
+                  "Smart Contracts auditados na Polygon",
+                  "Protocolo Ordinals para inscriptions",
+                  "Verificação on-chain de queima",
+                  "Prova criptográfica de impacto",
+                  "Integração com STHATION Platform"
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-400" />
+                    <span className="text-white/80">{item}</span>
                   </div>
                 ))}
               </div>
-            )}
-            <Link href="/nobiscore/assets">
-              <Button variant="ghost" className="w-full mt-4 text-neutral-400 hover:text-white hover:bg-neutral-800">
-                Ver Todos os Assets
-                <ArrowUpRight className="w-4 h-4 ml-2" />
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-3xl blur-3xl" />
+              <div className="relative p-8 rounded-3xl bg-white/5 border border-white/10">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-black/50">
+                    <div className="text-sm text-white/40 mb-1">Network</div>
+                    <div className="font-mono text-sm">Polygon PoS</div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-black/50">
+                    <div className="text-sm text-white/40 mb-1">Protocol</div>
+                    <div className="font-mono text-sm">Ordinals</div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-black/50">
+                    <div className="text-sm text-white/40 mb-1">Token</div>
+                    <div className="font-mono text-sm">ERC-1155</div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-black/50">
+                    <div className="text-sm text-white/40 mb-1">Output</div>
+                    <div className="font-mono text-sm">Inscription</div>
+                  </div>
+                </div>
+                
+                <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lock className="h-4 w-4 text-red-400" />
+                    <span className="text-sm font-medium">Segurança</span>
+                  </div>
+                  <p className="text-xs text-white/60">
+                    Todas as transações são verificadas e assinadas por múltiplas partes antes da execução.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Final */}
+      <section className="py-24 px-6">
+        <div className="container mx-auto max-w-4xl text-center">
+          <div className="p-12 rounded-3xl bg-gradient-to-r from-red-500/10 via-orange-500/10 to-yellow-500/10 border border-white/10">
+            <h2 className="text-4xl font-bold mb-4">Pronto para Eternizar seu Impacto?</h2>
+            <p className="text-white/60 mb-8 max-w-xl mx-auto">
+              Conecte suas carteiras e comece a transformar tokens de impacto em inscriptions Bitcoin agora mesmo.
+            </p>
+            <Link href="/nobiscore/connect">
+              <Button size="lg" className="bg-white text-black hover:bg-white/90 font-semibold rounded-full px-10 h-14 text-lg">
+                Conectar Carteiras
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </section>
 
-        {/* Recent Activity - Dados Reais */}
-        <Card className="bg-neutral-900 border-neutral-800">
-          <CardHeader>
-            <CardTitle className="text-white">Atividade Recente</CardTitle>
-            <CardDescription className="text-neutral-500">
-              Últimos registros na plataforma
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentActivity.length === 0 ? (
-              <div className="text-center py-8">
-                <Activity className="w-10 h-10 text-neutral-700 mx-auto mb-3" />
-                <p className="text-neutral-500 text-sm">Nenhuma atividade recente</p>
-              </div>
-            ) : (
-              <div className="space-y-0">
-                {recentActivity.slice(0, 5).map((activity: any) => (
-                  <ActivityItem 
-                    key={activity.id} 
-                    title={activity.title}
-                    type={activity.type}
-                    status={activity.status}
-                    inscriptionId={activity.inscription_id}
-                    polygonTxHash={activity.polygon_tx_hash}
-                    time={formatTimeAgo(activity.minted_at || activity.validated_at || activity.created_at)}
-                    category={activity.category}
-                  />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Pipeline Trails */}
-      {pipelineTrails.length > 0 && (
-        <Card className="bg-neutral-900 border-neutral-800">
-          <CardHeader>
-            <CardTitle className="text-white">Pipeline de Processamento</CardTitle>
-            <CardDescription className="text-neutral-500">
-              Trilhas de registro e validação em andamento
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-neutral-800">
-                    <th className="text-left text-neutral-500 text-xs font-medium py-3 px-4">Trail ID</th>
-                    <th className="text-left text-neutral-500 text-xs font-medium py-3 px-4">Tipo</th>
-                    <th className="text-left text-neutral-500 text-xs font-medium py-3 px-4">Estágio</th>
-                    <th className="text-left text-neutral-500 text-xs font-medium py-3 px-4">Status</th>
-                    <th className="text-left text-neutral-500 text-xs font-medium py-3 px-4">Polygon</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pipelineTrails.map((trail: any) => (
-                    <tr key={trail.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/30">
-                      <td className="py-3 px-4">
-                        <code className="text-xs text-neutral-400 font-mono">
-                          {trail.trail_id?.slice(0, 12)}...
-                        </code>
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge variant="outline" className={
-                          trail.type === 'SOCIAL' 
-                            ? "border-pink-500/30 text-pink-400" 
-                            : "border-green-500/30 text-green-400"
-                        }>
-                          {trail.type}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-neutral-400 text-sm">{trail.current_stage}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant="outline" className={
-                          trail.status === 'COMPLETED' 
-                            ? "border-green-500/30 text-green-400"
-                            : "border-yellow-500/30 text-yellow-400"
-                        }>
-                          {trail.status}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4">
-                        {trail.polygon_registered ? (
-                          <span className="text-green-400 text-xs">Registrado</span>
-                        ) : (
-                          <span className="text-neutral-500 text-xs">Pendente</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Footer */}
+      <footer className="py-8 px-6 border-t border-white/10">
+        <div className="container mx-auto max-w-6xl flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-white/40 text-sm">
+            <Zap className="h-4 w-4" />
+            <span>NobisCore by STHATION</span>
+          </div>
+          <div className="flex items-center gap-6 text-sm text-white/40">
+            <Link href="/" className="hover:text-white transition-colors">
+              Sthation
+            </Link>
+            <Link href="/projetos" className="hover:text-white transition-colors">
+              Projetos
+            </Link>
+            <Link href="/hall-de-impacto" className="hover:text-white transition-colors">
+              Hall de Impacto
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

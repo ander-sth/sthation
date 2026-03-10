@@ -89,7 +89,7 @@ function AssetCard({ asset }: { asset: any }) {
 
         <div className="flex gap-2 mt-4">
           {asset.polygon_tx_hash && !asset.inscription_id ? (
-            <Link href="/nobiscore/bridge" className="flex-1">
+            <Link href="/nobiscore/dashboard/bridge" className="flex-1">
               <Button 
                 size="sm" 
                 className="w-full bg-white text-black hover:bg-neutral-200"
@@ -206,7 +206,7 @@ export default function AssetsPage() {
             Seus tokens de impacto verificados na Polygon e Bitcoin
           </p>
         </div>
-        <Link href="/nobiscore/bridge">
+        <Link href="/nobiscore/dashboard/bridge">
           <Button className="bg-white text-black hover:bg-neutral-200">
             <Flame className="w-4 h-4 mr-2" />
             Bridge Assets
@@ -342,7 +342,7 @@ export default function AssetsPage() {
                 <p className="text-neutral-500 text-sm mt-1">
                   Faça bridge dos seus IACs validados para criar Inscriptions no Bitcoin
                 </p>
-                <Link href="/nobiscore/bridge">
+                <Link href="/nobiscore/dashboard/bridge">
                   <Button className="mt-4 bg-white text-black hover:bg-neutral-200">
                     Iniciar Bridge
                   </Button>

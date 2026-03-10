@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { 
   LayoutDashboard, 
   Wallet, 
@@ -14,7 +14,9 @@ import {
   ChevronRight,
   ExternalLink,
   Copy,
-  Check
+  Check,
+  LogOut,
+  Zap
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -26,58 +28,33 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
-// Simulated wallet state
-interface WalletState {
-  evm: { connected: boolean; address: string | null; chain: string }
-  btc: { connected: boolean; address: string | null; type: string }
-}
-
 const navigation = [
-  { name: "Dashboard", href: "/nobiscore", icon: LayoutDashboard },
-  { name: "My Assets", href: "/nobiscore/assets", icon: Wallet },
-  { name: "The Bridge", href: "/nobiscore/bridge", icon: Flame },
-  { name: "Marketplace", href: "/nobiscore/marketplace", icon: Store },
-  { name: "Settings", href: "/nobiscore/settings", icon: Settings },
+  { name: "Dashboard", href: "/nobiscore/dashboard", icon: LayoutDashboard },
+  { name: "My Assets", href: "/nobiscore/dashboard/assets", icon: Wallet },
+  { name: "The Bridge", href: "/nobiscore/dashboard/bridge", icon: Flame },
+  { name: "Marketplace", href: "/nobiscore/dashboard/marketplace", icon: Store },
+  { name: "Settings", href: "/nobiscore/dashboard/settings", icon: Settings },
 ]
 
 function truncateAddress(address: string, chars = 4) {
   return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`
 }
 
-function WalletButton({ 
+function WalletBadge({ 
   type, 
-  connected, 
   address, 
-  label,
-  onConnect 
+  label
 }: { 
   type: "evm" | "btc"
-  connected: boolean
-  address: string | null
+  address: string
   label: string
-  onConnect: () => void 
 }) {
   const [copied, setCopied] = useState(false)
 
   const copyAddress = () => {
-    if (address) {
-      navigator.clipboard.writeText(address)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
-
-  if (!connected) {
-    return (
-      <Button 
-        variant="outline" 
-        size="sm" 
-        onClick={onConnect}
-        className="border-neutral-700 bg-transparent hover:bg-neutral-800 text-neutral-300 hover:text-white font-mono text-xs"
-      >
-        Connect {type === "evm" ? "EVM" : "BTC"}
-      </Button>
-    )
+    navigator.clipboard.writeText(address)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -91,20 +68,13 @@ function WalletButton({
             : "border-orange-500/50 text-orange-400 bg-orange-500/10"
         )}
       >
-        {type === "evm" ? (
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-            {label}
-          </span>
-        ) : (
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-            {label}
-          </span>
-        )}
+        <span className="flex items-center gap-1.5">
+          <span className={`w-2 h-2 rounded-full ${type === "evm" ? "bg-purple-500" : "bg-orange-500"} animate-pulse`} />
+          {label}
+        </span>
       </Badge>
-      <code className="text-xs text-neutral-400 font-mono">
-        {address && truncateAddress(address)}
+      <code className="text-xs text-neutral-400 font-mono hidden sm:block">
+        {truncateAddress(address)}
       </code>
       <button 
         onClick={copyAddress}
@@ -116,32 +86,45 @@ function WalletButton({
   )
 }
 
-export default function NobisCoreLayout({
+export default function NobisCoreDashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
-  const [wallets, setWallets] = useState<WalletState>({
-    evm: { connected: false, address: null, chain: "Polygon" },
-    btc: { connected: false, address: null, type: "Ordinals" },
-  })
+  const [evmAddress, setEvmAddress] = useState<string | null>(null)
+  const [btcAddress, setBtcAddress] = useState<string | null>(null)
 
-  const connectEVM = () => {
-    // Simulated connection
-    setWallets(prev => ({
-      ...prev,
-      evm: { connected: true, address: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D", chain: "Polygon" }
-    }))
+  useEffect(() => {
+    // Verificar se usuário está conectado
+    const connected = localStorage.getItem("nobiscore_connected")
+    const evm = localStorage.getItem("nobiscore_evm_address")
+    const btc = localStorage.getItem("nobiscore_btc_address")
+
+    if (!connected || !evm || !btc) {
+      router.push("/nobiscore/connect")
+      return
+    }
+
+    setEvmAddress(evm)
+    setBtcAddress(btc)
+  }, [router])
+
+  const handleDisconnect = () => {
+    localStorage.removeItem("nobiscore_connected")
+    localStorage.removeItem("nobiscore_evm_address")
+    localStorage.removeItem("nobiscore_btc_address")
+    router.push("/nobiscore")
   }
 
-  const connectBTC = () => {
-    // Simulated connection
-    setWallets(prev => ({
-      ...prev,
-      btc: { connected: true, address: "bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297", type: "Ordinals" }
-    }))
+  if (!evmAddress || !btcAddress) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
+      </div>
+    )
   }
 
   return (
@@ -161,8 +144,8 @@ export default function NobisCoreLayout({
           )}>
             {!collapsed && (
               <Link href="/nobiscore" className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-                  <span className="text-black font-bold text-sm">N</span>
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-white" />
                 </div>
                 <div>
                   <span className="font-semibold tracking-tight">NobisCore</span>
@@ -171,8 +154,8 @@ export default function NobisCoreLayout({
               </Link>
             )}
             {collapsed && (
-              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-                <span className="text-black font-bold text-sm">N</span>
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-white" />
               </div>
             )}
           </div>
@@ -182,7 +165,7 @@ export default function NobisCoreLayout({
             <TooltipProvider>
               {navigation.map((item) => {
                 const isActive = pathname === item.href || 
-                  (item.href !== "/nobiscore" && pathname?.startsWith(item.href))
+                  (item.href !== "/nobiscore/dashboard" && pathname?.startsWith(item.href))
                 
                 return (
                   <Tooltip key={item.name} delayDuration={0}>
@@ -212,14 +195,27 @@ export default function NobisCoreLayout({
             </TooltipProvider>
           </nav>
 
-          {/* Collapse toggle */}
-          <div className="p-3 border-t border-neutral-800">
+          {/* Bottom Actions */}
+          <div className="p-3 border-t border-neutral-800 space-y-2">
+            {/* Disconnect */}
+            <button
+              onClick={handleDisconnect}
+              className={cn(
+                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors",
+                collapsed && "justify-center"
+              )}
+            >
+              <LogOut className="w-4 h-4" />
+              {!collapsed && <span className="text-sm">Desconectar</span>}
+            </button>
+
+            {/* Collapse toggle */}
             <button
               onClick={() => setCollapsed(!collapsed)}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors"
             >
               {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-              {!collapsed && <span className="text-sm">Collapse</span>}
+              {!collapsed && <span className="text-sm">Recolher</span>}
             </button>
           </div>
         </div>
@@ -233,42 +229,38 @@ export default function NobisCoreLayout({
         {/* Header */}
         <header className="sticky top-0 z-30 h-16 bg-black/80 backdrop-blur-xl border-b border-neutral-800">
           <div className="flex items-center justify-between h-full px-6">
-            {/* Breadcrumb / Title */}
+            {/* Breadcrumb */}
             <div className="flex items-center gap-2">
-              <span className="text-neutral-500 text-sm">NobisCore</span>
+              <Link href="/nobiscore" className="text-neutral-500 text-sm hover:text-white transition-colors">
+                NobisCore
+              </Link>
               <span className="text-neutral-600">/</span>
               <span className="text-white text-sm font-medium">
-                {navigation.find(n => n.href === pathname || (n.href !== "/nobiscore" && pathname?.startsWith(n.href)))?.name || "Dashboard"}
+                {navigation.find(n => n.href === pathname || (n.href !== "/nobiscore/dashboard" && pathname?.startsWith(n.href)))?.name || "Dashboard"}
               </span>
             </div>
 
-            {/* Wallet Connect Area */}
+            {/* Wallet Status */}
             <div className="flex items-center gap-6">
-              {/* EVM Wallet */}
-              <WalletButton 
+              <WalletBadge 
                 type="evm"
-                connected={wallets.evm.connected}
-                address={wallets.evm.address}
-                label={wallets.evm.chain}
-                onConnect={connectEVM}
+                address={evmAddress}
+                label="Polygon"
               />
 
-              {/* Divider */}
               <div className="h-6 w-px bg-neutral-800" />
 
-              {/* BTC Wallet */}
-              <WalletButton 
+              <WalletBadge 
                 type="btc"
-                connected={wallets.btc.connected}
-                address={wallets.btc.address}
-                label={wallets.btc.type}
-                onConnect={connectBTC}
+                address={btcAddress}
+                label="Bitcoin"
               />
 
-              {/* External Link */}
-              <Button variant="ghost" size="icon" className="text-neutral-500 hover:text-white">
-                <ExternalLink className="w-4 h-4" />
-              </Button>
+              <Link href="/" target="_blank">
+                <Button variant="ghost" size="icon" className="text-neutral-500 hover:text-white">
+                  <ExternalLink className="w-4 h-4" />
+                </Button>
+              </Link>
             </div>
           </div>
         </header>
