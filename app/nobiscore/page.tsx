@@ -16,7 +16,9 @@ import {
   CheckCircle2,
   TrendingUp,
   Lock,
-  Sparkles
+  Sparkles,
+  LogIn,
+  UserPlus
 } from "lucide-react"
 import useSWR from "swr"
 
@@ -31,8 +33,8 @@ export default function NobisCoreLanding() {
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-black/80 backdrop-blur-xl">
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/nobiscore" className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
-              <Zap className="h-5 w-5 text-white" />
+            <div className="h-9 w-9 rounded-lg bg-white flex items-center justify-center">
+              <Zap className="h-5 w-5 text-black" />
             </div>
             <div className="flex items-baseline gap-1">
               <span className="text-xl font-bold tracking-tight">NobisCore</span>
@@ -58,9 +60,10 @@ export default function NobisCoreLanding() {
                 Voltar à Sthation
               </Button>
             </Link>
-            <Link href="/nobiscore/connect">
+            <Link href="/login?redirect=/nobiscore/dashboard">
               <Button className="bg-white text-black hover:bg-white/90 font-semibold rounded-full px-6">
-                Conectar Carteira
+                <LogIn className="h-4 w-4 mr-2" />
+                Entrar
               </Button>
             </Link>
           </div>
@@ -70,21 +73,21 @@ export default function NobisCoreLanding() {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6 relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
         </div>
 
         <div className="container mx-auto max-w-6xl relative z-10">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8">
-              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-sm text-white/60">Polygon - Bitcoin Bridge</span>
+              <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
+              <span className="text-sm text-white/60">Polygon to Bitcoin Bridge</span>
             </div>
             
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
               Transforme Impacto em
               <br />
-              <span className="bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent">
+              <span className="text-white/80">
                 Inscriptions Bitcoin
               </span>
             </h1>
@@ -95,17 +98,18 @@ export default function NobisCoreLanding() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/nobiscore/connect">
-                <Button size="lg" className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-full px-8 h-14 text-lg shadow-lg shadow-red-500/25">
-                  Conectar Carteira
-                  <ArrowRight className="ml-2 h-5 w-5" />
+              <Link href="/login?redirect=/nobiscore/dashboard">
+                <Button size="lg" className="bg-white text-black hover:bg-white/90 font-semibold rounded-full px-8 h-14 text-lg">
+                  <LogIn className="mr-2 h-5 w-5" />
+                  Entrar na Conta
                 </Button>
               </Link>
-              <a href="#como-funciona">
+              <Link href="/cadastro?redirect=/nobiscore/dashboard">
                 <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 rounded-full px-8 h-14 text-lg">
-                  Saiba Mais
+                  <UserPlus className="mr-2 h-5 w-5" />
+                  Criar Conta
                 </Button>
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -141,31 +145,28 @@ export default function NobisCoreLanding() {
             {[
               {
                 step: "01",
-                title: "Conecte suas Carteiras",
-                description: "Conecte sua carteira EVM (MetaMask) para Polygon e sua carteira Bitcoin (Xverse, Unisat) para receber inscriptions.",
+                title: "Faça Login e Conecte suas Carteiras",
+                description: "Entre na sua conta Sthation, depois conecte sua carteira EVM (MetaMask) para Polygon e sua carteira Bitcoin (Xverse, Unisat).",
                 icon: Lock,
-                color: "from-purple-500 to-purple-600"
               },
               {
                 step: "02", 
                 title: "Selecione seus Tokens",
                 description: "Escolha os tokens de impacto (IACs) que deseja transformar em inscriptions permanentes no Bitcoin.",
                 icon: Layers,
-                color: "from-red-500 to-red-600"
               },
               {
                 step: "03",
                 title: "Burn & Mint",
                 description: "O token é queimado na Polygon e uma inscription é gerada no Bitcoin com todos os dados de impacto.",
                 icon: Sparkles,
-                color: "from-orange-500 to-orange-600"
               }
             ].map((item, i) => (
               <div key={i} className="relative p-8 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-colors group">
                 <div className="absolute -top-4 -right-4 text-6xl font-bold text-white/5 group-hover:text-white/10 transition-colors">
                   {item.step}
                 </div>
-                <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${item.color} mb-6`}>
+                <div className="inline-flex p-3 rounded-xl bg-white/10 mb-6">
                   <item.icon className="h-6 w-6 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
@@ -178,8 +179,8 @@ export default function NobisCoreLanding() {
           <div className="mt-16 p-8 rounded-2xl bg-white/5 border border-white/10">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-2xl bg-purple-500/20 flex items-center justify-center">
-                  <Hexagon className="h-8 w-8 text-purple-400" />
+                <div className="h-16 w-16 rounded-2xl bg-white/10 flex items-center justify-center">
+                  <Hexagon className="h-8 w-8 text-white/60" />
                 </div>
                 <div>
                   <div className="text-sm text-white/40">Origem</div>
@@ -188,16 +189,16 @@ export default function NobisCoreLanding() {
               </div>
 
               <div className="flex items-center gap-2 text-white/40">
-                <div className="h-px w-12 bg-gradient-to-r from-purple-500 to-red-500 hidden md:block" />
+                <div className="h-px w-12 bg-white/20 hidden md:block" />
                 <ChevronRight className="h-5 w-5" />
                 <span className="text-sm">Burn</span>
                 <ChevronRight className="h-5 w-5" />
-                <div className="h-px w-12 bg-gradient-to-r from-red-500 to-orange-500 hidden md:block" />
+                <div className="h-px w-12 bg-white/20 hidden md:block" />
               </div>
 
               <div className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-2xl bg-red-500/20 flex items-center justify-center">
-                  <Zap className="h-8 w-8 text-red-400" />
+                <div className="h-16 w-16 rounded-2xl bg-white/10 flex items-center justify-center">
+                  <Zap className="h-8 w-8 text-white/60" />
                 </div>
                 <div>
                   <div className="text-sm text-white/40">Processamento</div>
@@ -206,16 +207,16 @@ export default function NobisCoreLanding() {
               </div>
 
               <div className="flex items-center gap-2 text-white/40">
-                <div className="h-px w-12 bg-gradient-to-r from-red-500 to-orange-500 hidden md:block" />
+                <div className="h-px w-12 bg-white/20 hidden md:block" />
                 <ChevronRight className="h-5 w-5" />
                 <span className="text-sm">Mint</span>
                 <ChevronRight className="h-5 w-5" />
-                <div className="h-px w-12 bg-gradient-to-r from-orange-500 to-yellow-500 hidden md:block" />
+                <div className="h-px w-12 bg-white/20 hidden md:block" />
               </div>
 
               <div className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-2xl bg-orange-500/20 flex items-center justify-center">
-                  <Bitcoin className="h-8 w-8 text-orange-400" />
+                <div className="h-16 w-16 rounded-2xl bg-white/10 flex items-center justify-center">
+                  <Bitcoin className="h-8 w-8 text-white/60" />
                 </div>
                 <div>
                   <div className="text-sm text-white/40">Destino</div>
@@ -262,8 +263,8 @@ export default function NobisCoreLanding() {
             ].map((benefit, i) => (
               <div key={i} className="flex gap-6 p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-colors">
                 <div className="shrink-0">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center">
-                    <benefit.icon className="h-6 w-6 text-red-400" />
+                  <div className="h-12 w-12 rounded-xl bg-white/10 flex items-center justify-center">
+                    <benefit.icon className="h-6 w-6 text-white/80" />
                   </div>
                 </div>
                 <div>
@@ -296,7 +297,7 @@ export default function NobisCoreLanding() {
                   "Integração com STHATION Platform"
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-400" />
+                    <CheckCircle2 className="h-5 w-5 text-white/60" />
                     <span className="text-white/80">{item}</span>
                   </div>
                 ))}
@@ -304,30 +305,30 @@ export default function NobisCoreLanding() {
             </div>
 
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-3xl blur-3xl" />
+              <div className="absolute inset-0 bg-white/5 rounded-3xl blur-3xl" />
               <div className="relative p-8 rounded-3xl bg-white/5 border border-white/10">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl bg-black/50">
+                  <div className="p-4 rounded-xl bg-black/50 border border-white/5">
                     <div className="text-sm text-white/40 mb-1">Network</div>
                     <div className="font-mono text-sm">Polygon PoS</div>
                   </div>
-                  <div className="p-4 rounded-xl bg-black/50">
+                  <div className="p-4 rounded-xl bg-black/50 border border-white/5">
                     <div className="text-sm text-white/40 mb-1">Protocol</div>
                     <div className="font-mono text-sm">Ordinals</div>
                   </div>
-                  <div className="p-4 rounded-xl bg-black/50">
+                  <div className="p-4 rounded-xl bg-black/50 border border-white/5">
                     <div className="text-sm text-white/40 mb-1">Token</div>
                     <div className="font-mono text-sm">ERC-1155</div>
                   </div>
-                  <div className="p-4 rounded-xl bg-black/50">
+                  <div className="p-4 rounded-xl bg-black/50 border border-white/5">
                     <div className="text-sm text-white/40 mb-1">Output</div>
                     <div className="font-mono text-sm">Inscription</div>
                   </div>
                 </div>
                 
-                <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/20">
+                <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10">
                   <div className="flex items-center gap-2 mb-2">
-                    <Lock className="h-4 w-4 text-red-400" />
+                    <Lock className="h-4 w-4 text-white/60" />
                     <span className="text-sm font-medium">Segurança</span>
                   </div>
                   <p className="text-xs text-white/60">
@@ -343,17 +344,25 @@ export default function NobisCoreLanding() {
       {/* CTA Final */}
       <section className="py-24 px-6">
         <div className="container mx-auto max-w-4xl text-center">
-          <div className="p-12 rounded-3xl bg-gradient-to-r from-red-500/10 via-orange-500/10 to-yellow-500/10 border border-white/10">
+          <div className="p-12 rounded-3xl bg-white/5 border border-white/10">
             <h2 className="text-4xl font-bold mb-4">Pronto para Eternizar seu Impacto?</h2>
             <p className="text-white/60 mb-8 max-w-xl mx-auto">
-              Conecte suas carteiras e comece a transformar tokens de impacto em inscriptions Bitcoin agora mesmo.
+              Crie sua conta ou faça login para começar a transformar tokens de impacto em inscriptions Bitcoin.
             </p>
-            <Link href="/nobiscore/connect">
-              <Button size="lg" className="bg-white text-black hover:bg-white/90 font-semibold rounded-full px-10 h-14 text-lg">
-                Conectar Carteiras
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link href="/cadastro?redirect=/nobiscore/dashboard">
+                <Button size="lg" className="bg-white text-black hover:bg-white/90 font-semibold rounded-full px-10 h-14 text-lg">
+                  <UserPlus className="mr-2 h-5 w-5" />
+                  Criar Conta Grátis
+                </Button>
+              </Link>
+              <Link href="/login?redirect=/nobiscore/dashboard">
+                <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 rounded-full px-10 h-14 text-lg">
+                  <LogIn className="mr-2 h-5 w-5" />
+                  Já tenho conta
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
