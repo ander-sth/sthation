@@ -20,7 +20,8 @@ import {
   Link2,
   AlertCircle,
   X,
-  User
+  User,
+  Loader2
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -48,15 +49,15 @@ const navigation = [
 ]
 
 const evmWallets = [
-  { name: "MetaMask", id: "metamask" },
-  { name: "WalletConnect", id: "walletconnect" },
-  { name: "Coinbase Wallet", id: "coinbase" },
+  { name: "MetaMask", id: "metamask", icon: "🦊" },
+  { name: "WalletConnect", id: "walletconnect", icon: "🔗", disabled: true },
+  { name: "Coinbase Wallet", id: "coinbase", icon: "💠", disabled: true },
 ]
 
 const btcWallets = [
-  { name: "Xverse", id: "xverse" },
-  { name: "Unisat", id: "unisat" },
-  { name: "Leather", id: "leather" },
+  { name: "Unisat", id: "unisat", icon: "🟠" },
+  { name: "Xverse", id: "xverse", icon: "⚡" },
+  { name: "Leather", id: "leather", icon: "🔶", disabled: true },
 ]
 
 function truncateAddress(address: string, chars = 4) {
@@ -134,9 +135,9 @@ export default function NobisCoreDashboardLayout({
   const [btcAddress, setBtcAddress] = useState<string | null>(null)
   const [showWalletModal, setShowWalletModal] = useState(false)
   const [walletType, setWalletType] = useState<"evm" | "btc">("evm")
+  const [connecting, setConnecting] = useState<string | null>(null)
 
   useEffect(() => {
-    // Verificar se usuário está logado no NobisCore (sistema independente)
     const checkAuth = () => {
       const token = localStorage.getItem("nobiscore_token")
       const userData = localStorage.getItem("nobiscore_user")
@@ -156,7 +157,7 @@ export default function NobisCoreDashboardLayout({
         return
       }
 
-      // Carregar carteiras conectadas (se houver)
+      // Carregar carteiras conectadas
       const evm = localStorage.getItem("nobiscore_evm_address")
       const btc = localStorage.getItem("nobiscore_btc_address")
       setEvmAddress(evm)
@@ -165,7 +166,26 @@ export default function NobisCoreDashboardLayout({
     }
 
     checkAuth()
-  }, [])
+
+    // Listener para mudanças de conta MetaMask
+    if (typeof window !== "undefined" && (window as any).ethereum) {
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (accounts.length === 0) {
+          localStorage.removeItem("nobiscore_evm_address")
+          setEvmAddress(null)
+        } else if (accounts[0] !== evmAddress) {
+          localStorage.setItem("nobiscore_evm_address", accounts[0])
+          setEvmAddress(accounts[0])
+        }
+      }
+
+      ;(window as any).ethereum.on("accountsChanged", handleAccountsChanged)
+      
+      return () => {
+        (window as any).ethereum.removeListener("accountsChanged", handleAccountsChanged)
+      }
+    }
+  }, [evmAddress])
 
   const handleLogout = () => {
     localStorage.removeItem("nobiscore_token")
@@ -180,60 +200,117 @@ export default function NobisCoreDashboardLayout({
     setShowWalletModal(true)
   }
 
-  const handleWalletSelect = async (walletId: string) => {
+  const connectMetaMask = async () => {
+    setConnecting("metamask")
     try {
-      if (walletType === "evm") {
-        // Conexão real com MetaMask/EVM wallets
-        if (walletId === "metamask") {
-          if (typeof window !== "undefined" && (window as any).ethereum) {
-            const accounts = await (window as any).ethereum.request({ 
-              method: "eth_requestAccounts" 
+      // Verificar se está no mobile
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      )
+
+      if (typeof window !== "undefined" && (window as any).ethereum) {
+        // MetaMask disponível
+        const accounts = await (window as any).ethereum.request({
+          method: "eth_requestAccounts",
+        })
+
+        if (accounts && accounts[0]) {
+          // Tentar mudar para Polygon
+          try {
+            await (window as any).ethereum.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: "0x89" }], // Polygon Mainnet
             })
-            if (accounts && accounts[0]) {
-              localStorage.setItem("nobiscore_evm_address", accounts[0])
-              setEvmAddress(accounts[0])
+          } catch (switchError: any) {
+            // Se a rede não existe, adicionar
+            if (switchError.code === 4902) {
+              await (window as any).ethereum.request({
+                method: "wallet_addEthereumChain",
+                params: [
+                  {
+                    chainId: "0x89",
+                    chainName: "Polygon Mainnet",
+                    nativeCurrency: {
+                      name: "MATIC",
+                      symbol: "MATIC",
+                      decimals: 18,
+                    },
+                    rpcUrls: ["https://polygon-rpc.com/"],
+                    blockExplorerUrls: ["https://polygonscan.com/"],
+                  },
+                ],
+              })
             }
-          } else {
-            alert("MetaMask não encontrada. Por favor instale a extensão.")
-            return
           }
-        } else {
-          alert(`Carteira ${walletId} será implementada em breve. Use MetaMask por enquanto.`)
-          return
+
+          localStorage.setItem("nobiscore_evm_address", accounts[0])
+          setEvmAddress(accounts[0])
+          setShowWalletModal(false)
         }
+      } else if (isMobile) {
+        // Mobile sem MetaMask - abrir deep link
+        const currentUrl = encodeURIComponent(window.location.href)
+        const metamaskAppDeepLink = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`
+        window.location.href = metamaskAppDeepLink
       } else {
-        // Conexão real com Bitcoin wallets
-        if (walletId === "unisat") {
-          if (typeof window !== "undefined" && (window as any).unisat) {
-            const accounts = await (window as any).unisat.requestAccounts()
-            if (accounts && accounts[0]) {
-              localStorage.setItem("nobiscore_btc_address", accounts[0])
-              setBtcAddress(accounts[0])
-            }
-          } else {
-            alert("Unisat não encontrada. Por favor instale a extensão.")
-            return
-          }
-        } else if (walletId === "xverse") {
-          if (typeof window !== "undefined" && (window as any).XverseProviders) {
-            const response = await (window as any).XverseProviders.request("getAccounts", {})
-            if (response?.result?.[0]?.address) {
-              localStorage.setItem("nobiscore_btc_address", response.result[0].address)
-              setBtcAddress(response.result[0].address)
-            }
-          } else {
-            alert("Xverse não encontrada. Por favor instale a extensão.")
-            return
+        // Desktop sem MetaMask
+        window.open("https://metamask.io/download/", "_blank")
+      }
+    } catch (error: any) {
+      console.error("Erro ao conectar MetaMask:", error)
+      alert(error?.message || "Erro ao conectar carteira. Tente novamente.")
+    } finally {
+      setConnecting(null)
+    }
+  }
+
+  const connectBtcWallet = async (walletId: "unisat" | "xverse") => {
+    setConnecting(walletId)
+    try {
+      if (walletId === "unisat") {
+        if (typeof window !== "undefined" && (window as any).unisat) {
+          const accounts = await (window as any).unisat.requestAccounts()
+          if (accounts && accounts[0]) {
+            localStorage.setItem("nobiscore_btc_address", accounts[0])
+            localStorage.setItem("nobiscore_btc_wallet", "unisat")
+            setBtcAddress(accounts[0])
+            setShowWalletModal(false)
           }
         } else {
-          alert(`Carteira ${walletId} será implementada em breve. Use Unisat ou Xverse por enquanto.`)
-          return
+          window.open("https://unisat.io/download", "_blank")
+        }
+      } else if (walletId === "xverse") {
+        if (typeof window !== "undefined" && (window as any).XverseProviders) {
+          const response = await (window as any).XverseProviders.request("getAccounts", {
+            purposes: ["ordinals", "payment"],
+          })
+          if (response?.result?.[0]?.address) {
+            localStorage.setItem("nobiscore_btc_address", response.result[0].address)
+            localStorage.setItem("nobiscore_btc_wallet", "xverse")
+            setBtcAddress(response.result[0].address)
+            setShowWalletModal(false)
+          }
+        } else {
+          window.open("https://www.xverse.app/download", "_blank")
         }
       }
-      setShowWalletModal(false)
     } catch (error: any) {
-      console.error("Erro ao conectar carteira:", error)
-      alert(error?.message || "Erro ao conectar carteira. Tente novamente.")
+      console.error("Erro ao conectar Bitcoin wallet:", error)
+      alert(error?.message || "Erro ao conectar carteira Bitcoin. Tente novamente.")
+    } finally {
+      setConnecting(null)
+    }
+  }
+
+  const handleWalletSelect = async (walletId: string) => {
+    if (walletType === "evm") {
+      if (walletId === "metamask") {
+        await connectMetaMask()
+      }
+    } else {
+      if (walletId === "unisat" || walletId === "xverse") {
+        await connectBtcWallet(walletId)
+      }
     }
   }
 
@@ -243,6 +320,7 @@ export default function NobisCoreDashboardLayout({
       setEvmAddress(null)
     } else {
       localStorage.removeItem("nobiscore_btc_address")
+      localStorage.removeItem("nobiscore_btc_wallet")
       setBtcAddress(null)
     }
   }
@@ -350,12 +428,15 @@ export default function NobisCoreDashboardLayout({
                   <span className="text-xs text-white/60">Polygon</span>
                 </div>
                 {evmAddress ? (
-                  <button 
-                    onClick={() => handleDisconnectWallet("evm")}
-                    className="text-xs text-white/40 hover:text-white"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <code className="text-[10px] text-white/40">{truncateAddress(evmAddress)}</code>
+                    <button 
+                      onClick={() => handleDisconnectWallet("evm")}
+                      className="text-xs text-white/40 hover:text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                 ) : (
                   <button 
                     onClick={() => handleConnectWallet("evm")}
@@ -373,12 +454,15 @@ export default function NobisCoreDashboardLayout({
                   <span className="text-xs text-white/60">Bitcoin</span>
                 </div>
                 {btcAddress ? (
-                  <button 
-                    onClick={() => handleDisconnectWallet("btc")}
-                    className="text-xs text-white/40 hover:text-white"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <code className="text-[10px] text-white/40">{truncateAddress(btcAddress)}</code>
+                    <button 
+                      onClick={() => handleDisconnectWallet("btc")}
+                      className="text-xs text-white/40 hover:text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                 ) : (
                   <button 
                     onClick={() => handleConnectWallet("btc")}
@@ -393,7 +477,6 @@ export default function NobisCoreDashboardLayout({
 
           {/* Bottom Actions */}
           <div className="p-3 border-t border-white/10 space-y-2">
-            {/* Logout */}
             <button
               onClick={handleLogout}
               className={cn(
@@ -405,7 +488,6 @@ export default function NobisCoreDashboardLayout({
               {!collapsed && <span className="text-sm">Sair</span>}
             </button>
 
-            {/* Collapse toggle */}
             <button
               onClick={() => setCollapsed(!collapsed)}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
@@ -425,7 +507,6 @@ export default function NobisCoreDashboardLayout({
         {/* Header */}
         <header className="sticky top-0 z-30 h-16 bg-black/80 backdrop-blur-xl border-b border-white/10">
           <div className="flex items-center justify-between h-full px-6">
-            {/* Breadcrumb */}
             <div className="flex items-center gap-2">
               <Link href="/nobiscore" className="text-white/40 text-sm hover:text-white transition-colors">
                 NobisCore
@@ -436,7 +517,6 @@ export default function NobisCoreDashboardLayout({
               </span>
             </div>
 
-            {/* Wallet Status */}
             <div className="flex items-center gap-4">
               <WalletBadge 
                 type="evm"
@@ -498,7 +578,10 @@ export default function NobisCoreDashboardLayout({
               Conectar Carteira {walletType === "evm" ? "Polygon (EVM)" : "Bitcoin"}
             </DialogTitle>
             <DialogDescription className="text-white/60">
-              Selecione sua carteira para conectar
+              {walletType === "evm" 
+                ? "Conecte sua carteira EVM para interagir com tokens na Polygon"
+                : "Conecte sua carteira Bitcoin para receber Ordinals Inscriptions"
+              }
             </DialogDescription>
           </DialogHeader>
 
@@ -507,15 +590,36 @@ export default function NobisCoreDashboardLayout({
               <button
                 key={wallet.id}
                 onClick={() => handleWalletSelect(wallet.id)}
-                className="w-full flex items-center gap-3 p-4 rounded-lg border border-white/10 hover:bg-white/5 hover:border-white/20 transition-colors"
+                disabled={wallet.disabled || connecting === wallet.id}
+                className={cn(
+                  "w-full flex items-center gap-3 p-4 rounded-lg border border-white/10 transition-colors",
+                  wallet.disabled 
+                    ? "opacity-50 cursor-not-allowed" 
+                    : "hover:bg-white/5 hover:border-white/20"
+                )}
               >
-                <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
-                  <Wallet className="w-5 h-5 text-white/60" />
+                <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center text-xl">
+                  {wallet.icon}
                 </div>
-                <span className="font-medium">{wallet.name}</span>
+                <div className="flex-1 text-left">
+                  <span className="font-medium">{wallet.name}</span>
+                  {wallet.disabled && (
+                    <span className="text-xs text-white/40 block">Em breve</span>
+                  )}
+                </div>
+                {connecting === wallet.id && (
+                  <Loader2 className="w-5 h-5 animate-spin text-white/60" />
+                )}
               </button>
             ))}
           </div>
+
+          <p className="text-xs text-white/40 text-center mt-4">
+            {walletType === "evm" 
+              ? "Não tem MetaMask? Baixe em metamask.io"
+              : "Não tem uma carteira Bitcoin? Baixe Unisat ou Xverse"
+            }
+          </p>
         </DialogContent>
       </Dialog>
     </div>
