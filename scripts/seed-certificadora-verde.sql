@@ -49,7 +49,7 @@ INSERT INTO institutions (
   '1ce71001-aaaa-bbbb-cccc-ddddeeee0002',
   'ce710001-aaaa-bbbb-cccc-ddddeeee0001',
   'Verde Consultoria Ambiental',
-  'CERTIFICADORA',
+  'AMBIENTAL',
   '98.765.432/0001-10',
   'Consultoria especializada em certificacao ambiental.',
   'Rua das Palmeiras, 500, Sala 301',
