@@ -136,19 +136,19 @@ export default function NobisCoreDashboardLayout({
   const [walletType, setWalletType] = useState<"evm" | "btc">("evm")
 
   useEffect(() => {
-    // Verificar se usuário está logado no Sthation
-    const token = localStorage.getItem("sthation_token")
-    const userData = localStorage.getItem("sthation_user")
+    // Verificar se usuário está logado no NobisCore (sistema independente)
+    const token = localStorage.getItem("nobiscore_token")
+    const userData = localStorage.getItem("nobiscore_user")
 
     if (!token || !userData) {
-      router.push("/login?redirect=/nobiscore/dashboard")
+      router.push("/nobiscore/login")
       return
     }
 
     try {
       setUser(JSON.parse(userData))
     } catch {
-      router.push("/login?redirect=/nobiscore/dashboard")
+      router.push("/nobiscore/login")
       return
     }
 
@@ -161,8 +161,8 @@ export default function NobisCoreDashboardLayout({
   }, [router])
 
   const handleLogout = () => {
-    localStorage.removeItem("sthation_token")
-    localStorage.removeItem("sthation_user")
+    localStorage.removeItem("nobiscore_token")
+    localStorage.removeItem("nobiscore_user")
     localStorage.removeItem("nobiscore_evm_address")
     localStorage.removeItem("nobiscore_btc_address")
     router.push("/nobiscore")

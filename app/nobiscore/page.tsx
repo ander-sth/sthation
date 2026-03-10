@@ -60,7 +60,7 @@ export default function NobisCoreLanding() {
                 Voltar à Sthation
               </Button>
             </Link>
-            <Link href="/login?redirect=/nobiscore/dashboard">
+            <Link href="/nobiscore/login">
               <Button className="bg-white text-black hover:bg-white/90 font-semibold rounded-full px-6">
                 <LogIn className="h-4 w-4 mr-2" />
                 Entrar
@@ -98,13 +98,13 @@ export default function NobisCoreLanding() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/login?redirect=/nobiscore/dashboard">
+              <Link href="/nobiscore/login">
                 <Button size="lg" className="bg-white text-black hover:bg-white/90 font-semibold rounded-full px-8 h-14 text-lg">
                   <LogIn className="mr-2 h-5 w-5" />
                   Entrar na Conta
                 </Button>
               </Link>
-              <Link href="/cadastro?redirect=/nobiscore/dashboard">
+              <Link href="/nobiscore/cadastro">
                 <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 rounded-full px-8 h-14 text-lg">
                   <UserPlus className="mr-2 h-5 w-5" />
                   Criar Conta
@@ -350,13 +350,13 @@ export default function NobisCoreLanding() {
               Crie sua conta ou faça login para começar a transformar tokens de impacto em inscriptions Bitcoin.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/cadastro?redirect=/nobiscore/dashboard">
+              <Link href="/nobiscore/cadastro">
                 <Button size="lg" className="bg-white text-black hover:bg-white/90 font-semibold rounded-full px-10 h-14 text-lg">
                   <UserPlus className="mr-2 h-5 w-5" />
                   Criar Conta Grátis
                 </Button>
               </Link>
-              <Link href="/login?redirect=/nobiscore/dashboard">
+              <Link href="/nobiscore/login">
                 <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 rounded-full px-10 h-14 text-lg">
                   <LogIn className="mr-2 h-5 w-5" />
                   Já tenho conta
