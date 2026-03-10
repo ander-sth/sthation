@@ -14,7 +14,8 @@ import {
   ExternalLink,
   AlertCircle,
   Heart,
-  Leaf
+  Leaf,
+  RefreshCw
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -28,7 +29,8 @@ import {
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
-import useSWR from "swr"
+import useSWR, { mutate } from "swr"
+import { useToast } from "@/hooks/use-toast"
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
@@ -41,56 +43,171 @@ const steps = [
 ]
 
 export default function TheBridgePage() {
+  const { toast } = useToast()
   const [selectedIacId, setSelectedIacId] = useState<string>("")
   const [step, setStep] = useState<BridgeStep>("select")
   const [currentProcessStep, setCurrentProcessStep] = useState(0)
-  const [resultInscriptionId, setResultInscriptionId] = useState<string>("")
+  const [bridgeResult, setBridgeResult] = useState<any>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
-  const { data, isLoading } = useSWR("/api/nobiscore/assets", fetcher)
-  const eligibleIacs = data?.eligibleForBridge || []
+  // Buscar IACs elegíveis (registrados na Polygon mas ainda não inscritos no Bitcoin)
+  const { data: assetsData, isLoading: assetsLoading } = useSWR("/api/nobiscore/assets", fetcher)
   
+  // Buscar fila de bridge pendente
+  const { data: queueData } = useSWR("/api/bridge/process?status=PENDING", fetcher)
+  
+  // Buscar estatísticas do bridge
+  const { data: statsData } = useSWR("/api/bridge/status", fetcher)
+
+  const eligibleIacs = assetsData?.eligibleForBridge || []
+  const pendingQueue = queueData?.queue || []
   const selectedIac = eligibleIacs.find((iac: any) => iac.id === selectedIacId)
 
   const handleStartBridge = async () => {
     if (!selectedIacId) return
     
+    setIsProcessing(true)
     setStep("burning")
     setCurrentProcessStep(0)
     
-    // Simular processo de burning (em produção seria uma chamada real à API)
-    await new Promise(resolve => setTimeout(resolve, 3000))
-    setCurrentProcessStep(1)
-    setStep("generating")
-    
-    // Simular geração de prova
-    await new Promise(resolve => setTimeout(resolve, 2500))
-    setCurrentProcessStep(2)
-    setStep("minting")
-    
-    // Simular minting (em produção seria o registro real no Bitcoin)
-    await new Promise(resolve => setTimeout(resolve, 4000))
-    
-    // Gerar um inscription ID fictício para demonstração
-    const inscriptionId = `${Date.now().toString(16)}i0`
-    setResultInscriptionId(inscriptionId)
-    setStep("complete")
+    try {
+      // Primeiro: verificar se IAC já está na fila ou se precisa ser adicionado
+      const statusRes = await fetch(`/api/bridge/status?iacId=${selectedIacId}`)
+      const statusData = await statusRes.json()
+      
+      let queueId = statusData?.details?.bridge?.queueId
+
+      // Se não está na fila, adicionar primeiro pagando gas
+      if (!queueId) {
+        const mintRes = await fetch("/api/bridge/mint-polygon", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ iacId: selectedIacId, payGasFee: true })
+        })
+        const mintData = await mintRes.json()
+        
+        if (!mintRes.ok) {
+          throw new Error(mintData.error || "Erro ao mintar na Polygon")
+        }
+        
+        // Buscar o queueId criado
+        const newStatusRes = await fetch(`/api/bridge/status?iacId=${selectedIacId}`)
+        const newStatusData = await newStatusRes.json()
+        queueId = newStatusData?.details?.bridge?.queueId
+      }
+
+      if (!queueId) {
+        // Buscar da fila
+        const queueRes = await fetch("/api/bridge/process?status=PENDING")
+        const queueList = await queueRes.json()
+        const queueItem = queueList?.queue?.find((q: any) => q.iac_id === selectedIacId)
+        queueId = queueItem?.id
+      }
+
+      if (!queueId) {
+        throw new Error("Não foi possível adicionar à fila de bridge")
+      }
+
+      // FASE 1: Burning (já iniciado)
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      setCurrentProcessStep(1)
+      setStep("generating")
+      
+      // FASE 2: Generating proof
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      setCurrentProcessStep(2)
+      setStep("minting")
+
+      // FASE 3: Processar o bridge completo (burn + inscription)
+      const processRes = await fetch("/api/bridge/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ queueId })
+      })
+      const processData = await processRes.json()
+
+      if (!processRes.ok) {
+        throw new Error(processData.error || "Erro ao processar bridge")
+      }
+
+      setBridgeResult(processData.data)
+      setStep("complete")
+      
+      // Atualizar dados
+      mutate("/api/nobiscore/assets")
+      mutate("/api/bridge/status")
+
+      toast({
+        title: "Bridge concluído!",
+        description: "Sua inscription foi criada com sucesso no Bitcoin",
+      })
+
+    } catch (error: any) {
+      console.error("[BRIDGE] Erro:", error)
+      toast({
+        title: "Erro no bridge",
+        description: error.message || "Erro ao processar bridge",
+        variant: "destructive"
+      })
+      setStep("select")
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   const resetBridge = () => {
     setStep("select")
     setSelectedIacId("")
     setCurrentProcessStep(0)
-    setResultInscriptionId("")
+    setBridgeResult(null)
   }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white tracking-tight">The Bridge</h1>
-        <p className="text-neutral-400 mt-2">
-          Transforme seus IACs validados na Polygon em Inscriptions permanentes no Bitcoin
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">The Bridge</h1>
+          <p className="text-neutral-400 mt-2">
+            Transforme seus IACs validados na Polygon em Inscriptions permanentes no Bitcoin
+          </p>
+        </div>
+        {statsData?.stats && (
+          <div className="text-right hidden md:block">
+            <p className="text-sm text-neutral-500">Bridges completados</p>
+            <p className="text-2xl font-bold text-white">{statsData.stats.completed_bridges || 0}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="bg-neutral-900 border-neutral-800">
+          <CardContent className="p-4">
+            <p className="text-neutral-500 text-xs">Tokens na Polygon</p>
+            <p className="text-xl font-bold text-purple-400">{statsData?.stats?.total_polygon_tokens || 0}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-neutral-900 border-neutral-800">
+          <CardContent className="p-4">
+            <p className="text-neutral-500 text-xs">Na Fila</p>
+            <p className="text-xl font-bold text-yellow-400">{statsData?.stats?.pending_bridges || 0}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-neutral-900 border-neutral-800">
+          <CardContent className="p-4">
+            <p className="text-neutral-500 text-xs">Em Processamento</p>
+            <p className="text-xl font-bold text-blue-400">
+              {(statsData?.stats?.burning || 0) + (statsData?.stats?.inscribing || 0)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-neutral-900 border-neutral-800">
+          <CardContent className="p-4">
+            <p className="text-neutral-500 text-xs">Inscriptions Ativas</p>
+            <p className="text-xl font-bold text-orange-400">{statsData?.stats?.active_nobis_tokens || 0}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Main Bridge Interface */}
@@ -145,7 +262,7 @@ export default function TheBridgePage() {
             {/* Step 1: Select IAC */}
             {step === "select" && (
               <div className="space-y-8">
-                {isLoading ? (
+                {assetsLoading ? (
                   <div className="flex items-center justify-center py-20">
                     <Loader2 className="w-8 h-8 animate-spin text-neutral-500" />
                   </div>
@@ -155,8 +272,16 @@ export default function TheBridgePage() {
                     <h3 className="text-white text-lg font-medium">Nenhum IAC elegível</h3>
                     <p className="text-neutral-500 mt-2 max-w-md mx-auto">
                       Para fazer bridge, você precisa ter IACs validados e registrados na Polygon. 
-                      Complete o processo de validação VCA primeiro.
+                      IACs são registrados automaticamente após aprovação na Sthation.
                     </p>
+                    <Button 
+                      variant="outline" 
+                      className="mt-6 border-neutral-700"
+                      onClick={() => mutate("/api/nobiscore/assets")}
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Atualizar Lista
+                    </Button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -201,7 +326,7 @@ export default function TheBridgePage() {
                                   <div>
                                     <p className="font-medium line-clamp-1">{iac.title}</p>
                                     <p className="text-xs text-neutral-400">
-                                      {iac.institution_name || iac.category} - Score: {iac.vca_score || "N/A"}
+                                      {iac.institution_name || iac.category}
                                     </p>
                                   </div>
                                 </div>
@@ -229,22 +354,28 @@ export default function TheBridgePage() {
                               <span className="text-neutral-400">Instituição</span>
                               <span className="text-white">{selectedIac.institution_name || "N/A"}</span>
                             </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-neutral-400">Local</span>
-                              <span className="text-white">{selectedIac.location_state || "Brasil"}</span>
-                            </div>
                             {selectedIac.estimated_beneficiaries && (
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-neutral-400">Beneficiários</span>
                                 <span className="text-white">{selectedIac.estimated_beneficiaries.toLocaleString()}</span>
                               </div>
                             )}
-                            <div className="flex items-center justify-between text-sm pt-2 border-t border-neutral-700">
-                              <span className="text-neutral-400">Polygon TX</span>
-                              <code className="text-xs text-purple-400 font-mono">
-                                {selectedIac.polygon_tx_hash?.slice(0, 12)}...
-                              </code>
-                            </div>
+                            {selectedIac.polygon_tx_hash && (
+                              <div className="flex items-center justify-between text-sm pt-2 border-t border-neutral-700">
+                                <span className="text-neutral-400">Polygon TX</span>
+                                <a 
+                                  href={`https://polygonscan.com/tx/${selectedIac.polygon_tx_hash}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-purple-400 hover:text-purple-300"
+                                >
+                                  <code className="text-xs font-mono">
+                                    {selectedIac.polygon_tx_hash?.slice(0, 10)}...
+                                  </code>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       )}
@@ -301,10 +432,14 @@ export default function TheBridgePage() {
                 {eligibleIacs.length > 0 && (
                   <Button 
                     onClick={handleStartBridge}
-                    disabled={!selectedIacId}
+                    disabled={!selectedIacId || isProcessing}
                     className="w-full h-14 bg-white text-black hover:bg-neutral-200 font-medium text-base"
                   >
-                    <Flame className="w-5 h-5 mr-2" />
+                    {isProcessing ? (
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    ) : (
+                      <Flame className="w-5 h-5 mr-2" />
+                    )}
                     Transformar em Inscription
                   </Button>
                 )}
@@ -338,7 +473,7 @@ export default function TheBridgePage() {
             )}
 
             {/* Complete */}
-            {step === "complete" && (
+            {step === "complete" && bridgeResult && (
               <div className="text-center py-8">
                 <div className="w-20 h-20 bg-green-500 rounded-2xl flex items-center justify-center mx-auto">
                   <Check className="w-10 h-10 text-white" />
@@ -373,31 +508,33 @@ export default function TheBridgePage() {
                         <span className="text-neutral-400 text-sm">Inscription ID</span>
                         <div className="flex items-center gap-2">
                           <code className="text-orange-400 text-sm font-mono">
-                            {resultInscriptionId.slice(0, 12)}...
+                            {bridgeResult.bitcoin?.inscriptionId?.slice(0, 12)}...
                           </code>
                           <button 
                             className="text-neutral-500 hover:text-white"
-                            onClick={() => navigator.clipboard.writeText(resultInscriptionId)}
+                            onClick={() => navigator.clipboard.writeText(bridgeResult.bitcoin?.inscriptionId)}
                           >
                             <Copy className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
                       <div className="flex items-center justify-between p-3 bg-neutral-900 rounded-lg">
-                        <span className="text-neutral-400 text-sm">Polygon TX</span>
-                        <div className="flex items-center gap-2">
-                          <code className="text-xs text-purple-400 font-mono">
-                            {selectedIac?.polygon_tx_hash?.slice(0, 12)}...
+                        <span className="text-neutral-400 text-sm">Ordinal ID</span>
+                        <span className="text-white text-sm">{bridgeResult.bitcoin?.ordinalId}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-neutral-900 rounded-lg">
+                        <span className="text-neutral-400 text-sm">Polygon Burn TX</span>
+                        <a 
+                          href={`https://polygonscan.com/tx/${bridgeResult.polygon?.burnTx}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-purple-400 hover:text-purple-300"
+                        >
+                          <code className="text-xs font-mono">
+                            {bridgeResult.polygon?.burnTx?.slice(0, 10)}...
                           </code>
-                          <a 
-                            href={`https://polygonscan.com/tx/${selectedIac?.polygon_tx_hash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-neutral-500 hover:text-white"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </div>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
                       </div>
                     </div>
                   </CardContent>
@@ -409,14 +546,18 @@ export default function TheBridgePage() {
                     onClick={resetBridge}
                     className="border-neutral-700 text-white hover:bg-neutral-800"
                   >
-                    Bridge Mais
+                    Novo Bridge
                   </Button>
-                  <Button 
-                    className="bg-white text-black hover:bg-neutral-200"
-                    asChild
+                  <a 
+                    href={bridgeResult.bitcoin?.explorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
-                    <a href="/nobiscore/dashboard/marketplace">Ver no Marketplace</a>
-                  </Button>
+                    <Button className="bg-orange-500 hover:bg-orange-600 text-white">
+                      Ver no Ordinals
+                      <ExternalLink className="w-4 h-4 ml-2" />
+                    </Button>
+                  </a>
                 </div>
               </div>
             )}
@@ -424,43 +565,38 @@ export default function TheBridgePage() {
         </CardContent>
       </Card>
 
-      {/* Info Cards */}
-      {step === "select" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-neutral-900 border-neutral-800">
-            <CardContent className="p-5">
-              <div className="p-2 bg-purple-500/10 rounded-lg w-fit mb-3">
-                <Hexagon className="w-5 h-5 text-purple-400" />
-              </div>
-              <h3 className="text-white font-medium">IACs Validados</h3>
-              <p className="text-neutral-500 text-sm mt-1">
-                Seus impactos verificados na Polygon são queimados permanentemente
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-neutral-900 border-neutral-800">
-            <CardContent className="p-5">
-              <div className="p-2 bg-green-500/10 rounded-lg w-fit mb-3">
-                <Shield className="w-5 h-5 text-green-400" />
-              </div>
-              <h3 className="text-white font-medium">Prova Criptográfica</h3>
-              <p className="text-neutral-500 text-sm mt-1">
-                Atestação zero-knowledge garante integridade dos dados
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-neutral-900 border-neutral-800">
-            <CardContent className="p-5">
-              <div className="p-2 bg-orange-500/10 rounded-lg w-fit mb-3">
-                <Bitcoin className="w-5 h-5 text-orange-400" />
-              </div>
-              <h3 className="text-white font-medium">Bitcoin Inscription</h3>
-              <p className="text-neutral-500 text-sm mt-1">
-                Registro imutável na blockchain mais segura do mundo
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Pending Queue */}
+      {pendingQueue.length > 0 && step === "select" && (
+        <Card className="bg-neutral-900 border-neutral-800">
+          <CardContent className="p-6">
+            <h3 className="text-white font-medium mb-4">Bridges Pendentes</h3>
+            <div className="space-y-3">
+              {pendingQueue.slice(0, 5).map((item: any) => (
+                <div key={item.id} className="flex items-center justify-between p-3 bg-neutral-800 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center",
+                      item.type === "SOCIAL" ? "bg-pink-500/20" : "bg-green-500/20"
+                    )}>
+                      {item.type === "SOCIAL" ? (
+                        <Heart className="w-4 h-4 text-pink-400" />
+                      ) : (
+                        <Leaf className="w-4 h-4 text-green-400" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-white text-sm font-medium">{item.title}</p>
+                      <p className="text-neutral-500 text-xs">{item.institution_name}</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="border-yellow-500/30 text-yellow-400">
+                    {item.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   )
