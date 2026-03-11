@@ -149,16 +149,11 @@ export default function EditEnvironmentalProjectPage({ params }: { params: Promi
 
   // Buscar dados do projeto
   const { data, isLoading: loadingProject, error } = useSWR(`/api/iac/${id}`, fetcher)
-  
-  console.log("[v0] Edit page - ID:", id, "Loading:", loadingProject, "Error:", error, "Data:", data)
 
   // Preencher formulário com dados do projeto
   useEffect(() => {
-    console.log("[v0] Edit page - Data recebida:", data)
-    console.log("[v0] Edit page - data?.iac:", data?.iac)
     if (data?.iac) {
       const project = data.iac
-      console.log("[v0] Edit page - Preenchendo formulario com:", project)
       setFormData({
         title: project.title || "",
         description: project.description || "",

@@ -84,9 +84,9 @@ const navItems: NavItem[] = [
 
   // Certificacao Ambiental - Exclusivo Analistas Certificadores
   {
-    href: "/dashboard/technical-review",
+    href: "/dashboard/certification",
     icon: Award,
-    label: "Certificacao Ambiental",
+    label: "Certificar Projetos",
     roles: [UserRole.ANALISTA_CERTIFICADOR],
   },
 

@@ -37,6 +37,8 @@ import {
   Zap,
   Pencil,
   Lock,
+  DollarSign,
+  MessageSquare,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
@@ -71,6 +73,42 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
 
   // Buscar dados do projeto
   const { data, isLoading, error, mutate } = useSWR(`/api/iac/${id}`, fetcher)
+
+  // Buscar propostas de certificação para este projeto
+  const { data: proposalsData, mutate: mutateProposals } = useSWR(
+    data?.iac ? `/api/certification/proposals?iacId=${id}` : null,
+    fetcher
+  )
+  const proposals = proposalsData?.proposals || []
+  const [acceptingProposal, setAcceptingProposal] = useState<string | null>(null)
+
+  // Função para aceitar proposta de certificação
+  const handleAcceptProposal = async (proposalId: string) => {
+    if (!confirm("Ao aceitar esta proposta, as outras serao recusadas automaticamente. Deseja continuar?")) {
+      return
+    }
+    
+    setAcceptingProposal(proposalId)
+    try {
+      const res = await fetch(`/api/certification/proposals/${proposalId}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+      
+      if (res.ok) {
+        alert("Proposta aceita! O certificador sera notificado para iniciar a analise.")
+        mutate()
+        mutateProposals()
+      } else {
+        const data = await res.json()
+        alert(data.error || "Erro ao aceitar proposta")
+      }
+    } catch (err) {
+      alert("Erro ao aceitar proposta")
+    } finally {
+      setAcceptingProposal(null)
+    }
+  }
 
   // Função para solicitar certificação
   const handleRequestCertification = async () => {
@@ -539,6 +577,97 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
                   {isBlockchainRegistered && <CheckCircle2 className="h-5 w-5 text-emerald-600" />}
                 </div>
               </div>
+
+              {/* Propostas de Certificação */}
+              {project.status === "SUBMITTED" && proposals.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <DollarSign className="h-5 w-5" />
+                      Propostas de Certificacao Recebidas ({proposals.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {proposals.map((proposal: any) => (
+                        <div 
+                          key={proposal.id} 
+                          className={`p-4 rounded-lg border ${
+                            proposal.status === "ACCEPTED" 
+                              ? "bg-emerald-50 border-emerald-300 dark:bg-emerald-950/20" 
+                              : proposal.status === "REJECTED"
+                              ? "bg-red-50 border-red-300 dark:bg-red-950/20 opacity-60"
+                              : "bg-muted/50"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-foreground/60" />
+                                <span className="font-medium">{proposal.certifier_name}</span>
+                                {proposal.certifier_institution_name && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {proposal.certifier_institution_name}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-2xl font-bold text-emerald-600">
+                                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(proposal.proposed_value)}
+                              </p>
+                              {proposal.message && (
+                                <div className="flex items-start gap-2 mt-2 text-sm text-foreground/70">
+                                  <MessageSquare className="h-4 w-4 mt-0.5" />
+                                  <p>{proposal.message}</p>
+                                </div>
+                              )}
+                              <p className="text-xs text-foreground/50">
+                                Enviado em {new Date(proposal.created_at).toLocaleDateString("pt-BR")}
+                              </p>
+                            </div>
+                            <div>
+                              {proposal.status === "PENDING" && (
+                                <Button
+                                  size="sm"
+                                  className="bg-emerald-600 hover:bg-emerald-700"
+                                  onClick={() => handleAcceptProposal(proposal.id)}
+                                  disabled={acceptingProposal === proposal.id}
+                                >
+                                  {acceptingProposal === proposal.id ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                                  )}
+                                  Aceitar
+                                </Button>
+                              )}
+                              {proposal.status === "ACCEPTED" && (
+                                <Badge className="bg-emerald-600">Aceita</Badge>
+                              )}
+                              {proposal.status === "REJECTED" && (
+                                <Badge variant="outline" className="text-red-600">Recusada</Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Aguardando Propostas */}
+              {project.status === "SUBMITTED" && proposals.length === 0 && (
+                <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200">
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-5 w-5 text-amber-600" />
+                    <div>
+                      <p className="font-medium text-amber-800 dark:text-amber-400">Aguardando propostas de certificadores</p>
+                      <p className="text-sm text-amber-700 dark:text-amber-500">
+                        Certificadores estao analisando seu projeto. Voce sera notificado quando receberem propostas.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Technical Review Details */}
               {technicalReview && (
