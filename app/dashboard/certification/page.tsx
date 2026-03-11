@@ -33,6 +33,9 @@ import {
   DollarSign,
   Search,
   Filter,
+  Award,
+  ClipboardCheck,
+  ArrowRight,
 } from "lucide-react"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -46,10 +49,17 @@ export default function CertificationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
 
-  // Buscar projetos aguardando certificação
+  // Buscar projetos aguardando certificação (para enviar proposta)
   const { data, isLoading, mutate } = useSWR("/api/certification/pending-projects", fetcher)
 
+  // Buscar projetos onde minha proposta foi aceita (para analisar e certificar)
+  const { data: myProjectsData, isLoading: loadingMyProjects } = useSWR(
+    user?.id ? `/api/certification/my-projects?certifierId=${user.id}` : null,
+    fetcher
+  )
+
   const projects = data?.projects || []
+  const myProjects = myProjectsData?.projects || []
 
   // Filtrar projetos
   const filteredProjects = projects.filter((p: any) =>
@@ -140,6 +150,73 @@ export default function CertificationPage() {
           {filteredProjects.length} projeto(s) aguardando
         </Badge>
       </div>
+
+      {/* Projetos para Analisar (proposta aceita) */}
+      {myProjects.length > 0 && (
+        <Card className="border-2 border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/10">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-emerald-600" />
+              <CardTitle className="text-lg">Projetos para Analisar e Certificar</CardTitle>
+            </div>
+            <CardDescription>
+              Sua proposta foi aceita! Analise as evidencias e emita o certificado.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {myProjects.map((project: any) => (
+                <div 
+                  key={project.id} 
+                  className="flex items-center justify-between p-4 bg-white dark:bg-background rounded-lg border"
+                >
+                  <div className="space-y-1">
+                    <h4 className="font-semibold">{project.title}</h4>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Building2 className="h-4 w-4" />
+                        {project.institution_name}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        {project.location_name}, {project.location_state}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge className="bg-emerald-600 text-white">
+                        Valor: {formatCurrency(project.proposed_value)}
+                      </Badge>
+                      {project.status === "VALIDATED" && (
+                        <Badge variant="outline" className="text-amber-600 border-amber-300">
+                          Aguardando Analise
+                        </Badge>
+                      )}
+                      {project.status === "CERTIFIED" && (
+                        <Badge className="bg-emerald-600">Certificado</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
+                    <Link href={`/dashboard/certification/${project.id}/analyze`}>
+                      {project.status === "VALIDATED" ? (
+                        <>
+                          <Award className="mr-2 h-4 w-4" />
+                          Analisar e Certificar
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Ver Certificado
+                        </>
+                      )}
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Busca */}
       <div className="flex gap-4">
