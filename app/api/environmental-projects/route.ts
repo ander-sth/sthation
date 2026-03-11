@@ -69,6 +69,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json({ error: "Database not configured" }, { status: 500 })
+  }
+
+  const sql = neon(process.env.DATABASE_URL)
+
   try {
     const body = await request.json()
     const {
