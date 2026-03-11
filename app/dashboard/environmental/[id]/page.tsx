@@ -175,15 +175,13 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
   const statusCfg = STATUS_CONFIG[project.status] || STATUS_CONFIG.DRAFT
   const StatusIcon = statusCfg.icon
 
-  // Calcular metricas
+  // Calcular metricas usando campos corretos do banco de dados
   const metrics = {
-    inputKg: project.metrics?.inputKg || project.input_kg || 0,
-    outputKg: project.metrics?.outputKg || project.output_kg || 0,
-    co2eAvoided: project.metrics?.co2eAvoided || project.vca_score || 0,
-    cyclesCompleted: project.metrics?.cyclesCompleted || 0,
-    efficiency: project.metrics?.outputKg && project.metrics?.inputKg 
-      ? ((project.metrics.outputKg / project.metrics.inputKg) * 100).toFixed(1)
-      : 0,
+    inputKg: project.waste_processed || project.input_kg || 0,
+    outputKg: project.output_kg || 0,
+    co2eAvoided: project.co2_equivalent || project.vca_score || 0,
+    energyGenerated: project.energy_generated || 0,
+    sensorsCount: project.sensors_count || 0,
   }
 
   // Pode solicitar certificação se estiver concluído ou em andamento (não pode se já enviou ou está certificado)
@@ -312,7 +310,7 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{project.iot_sensors || 0}</div>
+            <div className="text-3xl font-bold">{metrics.sensorsCount}</div>
             <p className="text-xs text-foreground/60">dispositivos conectados</p>
           </CardContent>
         </Card>
@@ -455,58 +453,7 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
             </Card>
           </div>
 
-          {/* Impact Metrics */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Metricas de Impacto
-              </CardTitle>
-              <CardDescription>
-                Dados coletados durante o periodo de medicao do projeto
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-foreground/60">
-                    <Scale className="h-4 w-4" />
-                    Residuos Processados
-                  </div>
-                  <p className="text-2xl font-bold">{metrics.inputKg.toLocaleString("pt-BR")} kg</p>
-                  <Progress value={100} className="h-2" />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-foreground/60">
-                    <Leaf className="h-4 w-4" />
-                    CO2 Equivalente Evitado
-                  </div>
-                  <p className="text-2xl font-bold text-emerald-600">{metrics.co2eAvoided} tCO2e</p>
-                  <p className="text-xs text-foreground/60">Fator de emissao: 1.5 kg CO2e/kg</p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-foreground/60">
-                    <Thermometer className="h-4 w-4" />
-                    Temperatura Media
-                  </div>
-                  <p className="text-2xl font-bold">55-65°C</p>
-                  <p className="text-xs text-foreground/60">Faixa ideal para compostagem</p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-foreground/60">
-                    <Droplets className="h-4 w-4" />
-                    Umidade Media
-                  </div>
-                  <p className="text-2xl font-bold">50-60%</p>
-                  <p className="text-xs text-foreground/60">Faixa otima mantida</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          </TabsContent>
 
         {/* Evidences Tab */}
         <TabsContent value="evidences" className="space-y-4">
