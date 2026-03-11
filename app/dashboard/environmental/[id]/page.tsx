@@ -357,14 +357,46 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Visao Geral</TabsTrigger>
-          <TabsTrigger value="evidences">Evidencias ({evidences.length})</TabsTrigger>
-          <TabsTrigger value="certification">Certificacao</TabsTrigger>
-          <TabsTrigger value="timeline">Historico</TabsTrigger>
-        </TabsList>
+<TabsTrigger value="overview">Visao Geral</TabsTrigger>
+                <TabsTrigger value="evidences">Evidencias ({evidences.length})</TabsTrigger>
+                <TabsTrigger value="certification" className={proposals.length > 0 ? "relative" : ""}>
+                  Certificacao
+                  {proposals.filter((p: any) => p.status === "PENDING").length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                      {proposals.filter((p: any) => p.status === "PENDING").length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="timeline">Historico</TabsTrigger>
+              </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
+          {/* Alerta de Propostas Pendentes */}
+          {proposals.filter((p: any) => p.status === "PENDING").length > 0 && (
+            <div className="p-4 rounded-lg bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-400 animate-pulse">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="h-6 w-6 text-amber-600" />
+                  <div>
+                    <p className="font-semibold text-amber-800 dark:text-amber-300">
+                      Voce tem {proposals.filter((p: any) => p.status === "PENDING").length} proposta(s) de certificacao!
+                    </p>
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      Clique na aba "Certificacao" para ver os valores e aceitar uma proposta.
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  onClick={() => document.querySelector('[value="certification"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}
+                >
+                  Ver Propostas
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
