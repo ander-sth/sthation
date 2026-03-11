@@ -822,8 +822,15 @@ function PendingInscriptions() {
 
 // Estatisticas gerais da plataforma - visiveis para todos
 function PlatformStats() {
-  // Usar nova API para evitar cache com codigo antigo
-  const { data } = useApiData<any>("/api/plataforma-stats", {})
+  // Usar SWR direto com retry para melhor confiabilidade
+  const { data } = useSWR("/api/plataforma-stats", 
+    (url) => fetch(url).then(res => res.json()),
+    { 
+      revalidateOnFocus: false,
+      errorRetryCount: 3,
+      errorRetryInterval: 2000,
+    }
+  )
   const stats = data?.stats || {}
   
   return (
