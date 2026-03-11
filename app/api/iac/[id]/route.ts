@@ -40,12 +40,17 @@ export async function GET(
       ORDER BY captured_at DESC
     `
 
-    // Buscar audit log
-    const auditLog = await sql`
-      SELECT * FROM iac_audit_logs 
-      WHERE iac_id = ${id}
-      ORDER BY created_at DESC
-    `
+    // Buscar audit log (tabela pode nao existir)
+    let auditLog: any[] = []
+    try {
+      auditLog = await sql`
+        SELECT * FROM iac_audit_logs 
+        WHERE iac_id = ${id}
+        ORDER BY created_at DESC
+      `
+    } catch (e) {
+      // Tabela iac_audit_logs pode nao existir ainda
+    }
 
     // Buscar dados da Polygon (se houver)
     let polygonData = null
