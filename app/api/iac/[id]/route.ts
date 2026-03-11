@@ -1,6 +1,77 @@
 import { neon } from "@neondatabase/serverless"
 import { NextResponse } from "next/server"
 
+// Atualizar projeto
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json({ error: "Database not configured" }, { status: 500 })
+  }
+
+  const sql = neon(process.env.DATABASE_URL)
+
+  try {
+    const body = await request.json()
+
+    // Verificar se projeto existe e pode ser editado
+    const existing = await sql`SELECT id, status FROM impact_action_cards WHERE id = ${id}`
+    if (existing.length === 0) {
+      return NextResponse.json({ error: "Projeto nao encontrado" }, { status: 404 })
+    }
+
+    // Verificar se pode editar (não pode se já foi submetido para certificação)
+    const blockedStatuses = ["SUBMITTED", "VALIDATED", "CERTIFIED", "INSCRIBED", "MINTED"]
+    if (blockedStatuses.includes(existing[0].status)) {
+      return NextResponse.json(
+        { error: "Projeto nao pode ser editado pois ja foi enviado para certificacao" },
+        { status: 403 }
+      )
+    }
+
+    // Atualizar projeto
+    const result = await sql`
+      UPDATE impact_action_cards SET
+        title = ${body.title},
+        description = ${body.description},
+        category = ${body.category},
+        status = ${body.status || existing[0].status},
+        project_status = ${body.project_status},
+        data_collection_type = ${body.data_collection_type},
+        location_name = ${body.location_name},
+        location_state = ${body.location_state},
+        coordinates = ${body.coordinates || null},
+        measurement_unit = ${body.measurement_unit},
+        energy_generated = ${body.energy_generated || 0},
+        waste_processed = ${body.waste_processed || 0},
+        area_size = ${body.area_size || 0},
+        certification_standard = ${body.certification_standard || null},
+        existing_certifications = ${body.existing_certifications || null},
+        sensors_count = ${body.sensors_count || 0},
+        sensor_types = ${body.sensor_types || null},
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `
+
+    return NextResponse.json({ 
+      success: true, 
+      iac: result[0],
+      message: "Projeto atualizado com sucesso" 
+    })
+
+  } catch (error: any) {
+    console.error("[API] Erro ao atualizar IAC:", error)
+    return NextResponse.json(
+      { error: "Erro ao atualizar projeto", details: error.message },
+      { status: 500 }
+    )
+  }
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
