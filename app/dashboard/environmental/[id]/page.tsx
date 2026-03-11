@@ -612,7 +612,7 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
               </div>
 
               {/* Propostas de Certificação */}
-              {project.status === "SUBMITTED" && proposals.length > 0 && (
+              {(project.status === "SUBMITTED" || project.status === "VALIDATED" || project.status === "CERTIFIED") && proposals.length > 0 && (
                 <>
                   <Separator />
                   <div>
@@ -685,6 +685,21 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
                     </div>
                   </div>
                 </>
+              )}
+
+              {/* Proposta Aceita - Em Certificação */}
+              {project.status === "VALIDATED" && proposals.some((p: any) => p.status === "ACCEPTED") && (
+                <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border-2 border-emerald-400">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                    <div>
+                      <p className="font-semibold text-emerald-800 dark:text-emerald-300">Proposta aceita! Projeto em certificacao</p>
+                      <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                        O certificador foi notificado e ira analisar seu projeto para emitir o certificado e hash blockchain.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* Aguardando Propostas */}

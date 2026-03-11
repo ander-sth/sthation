@@ -278,13 +278,17 @@ export default function EnvironmentalProjectsPage() {
               const canSubmit = project.status === "COLLECTING" && project.collectionProgress >= 70
               const projectProposals = proposalsByProject[project.id] || []
               const pendingProposals = projectProposals.filter((p: any) => p.status === "PENDING")
+              const acceptedProposal = projectProposals.find((p: any) => p.status === "ACCEPTED")
               const hasProposals = pendingProposals.length > 0
+              const hasAcceptedProposal = !!acceptedProposal
 
               return (
                 <div
                   key={project.id}
                   className={`flex flex-col gap-4 rounded-lg border p-4 transition-colors ${
-                    hasProposals 
+                    hasAcceptedProposal
+                      ? "border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/10"
+                      : hasProposals 
                       ? "border-amber-400 bg-amber-50/50 dark:bg-amber-950/10" 
                       : "border-border hover:border-[#0a2f2f]/30"
                   }`}
@@ -296,7 +300,12 @@ export default function EnvironmentalProjectsPage() {
                         <CategoryIcon className="h-5 w-5 text-[#0a2f2f]" />
                         <h3 className="font-semibold">{project.title}</h3>
                         <Badge className={statusCfg.color}>{statusCfg.label}</Badge>
-                        {hasProposals && (
+                        {hasAcceptedProposal && (
+                          <Badge className="bg-emerald-600 text-white">
+                            Em Certificacao
+                          </Badge>
+                        )}
+                        {hasProposals && !hasAcceptedProposal && (
                           <Badge className="bg-amber-500 text-white animate-pulse">
                             <Bell className="mr-1 h-3 w-3" />
                             {pendingProposals.length} proposta{pendingProposals.length > 1 ? "s" : ""} de certificacao
@@ -371,8 +380,23 @@ export default function EnvironmentalProjectsPage() {
                         </p>
                       )}
 
-                      {/* Propostas recebidas */}
-                      {hasProposals && (
+                      {/* Proposta aceita - Em certificação */}
+                      {hasAcceptedProposal && (
+                        <div className="mt-3 p-3 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-400">
+                          <div className="flex items-center gap-2">
+                            <FileCheck className="h-4 w-4 text-emerald-700" />
+                            <span className="text-sm font-medium text-emerald-800 dark:text-emerald-400">
+                              Proposta aceita! Certificador: {acceptedProposal.certifier_name} - {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(acceptedProposal.proposed_value)}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-500">
+                            Aguardando analise e emissao do certificado com hash blockchain.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Propostas pendentes */}
+                      {hasProposals && !hasAcceptedProposal && (
                         <div className="mt-3 p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-300">
                           <div className="flex items-center gap-2 mb-2">
                             <DollarSign className="h-4 w-4 text-amber-700" />
