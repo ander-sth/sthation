@@ -1,8 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
+import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -33,10 +34,13 @@ import {
   X,
   Image as ImageIcon,
   File,
+  Save,
 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/lib/auth-context"
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 // Categorias de projetos ambientais
 const ENVIRONMENTAL_CATEGORIES = [
@@ -112,54 +116,74 @@ const DATA_COLLECTION_TYPES = [
   },
 ]
 
-export default function NewEnvironmentalProjectPage() {
+export default function EditEnvironmentalProjectPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
   const { toast } = useToast()
   const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [step, setStep] = useState(1)
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([])
-  const [uploadingFiles, setUploadingFiles] = useState(false)
   const [formData, setFormData] = useState({
-    // Informacoes basicas
     title: "",
     description: "",
     category: "",
     projectStatus: "EM_ANDAMENTO",
     dataCollectionType: "MANUAL",
-    
-    // Localizacao
     locationName: "",
     locationState: "",
     coordinates: "",
-    
-    // Datas
     startDate: "",
     endDate: "",
-    
-    // Metricas ambientais
     estimatedCO2: "",
     measurementUnit: "tCO2e",
     energyGenerated: "",
     wasteProcessed: "",
     areaSize: "",
-    
-    // Metodologia e documentacao
     methodology: "",
     certificationStandard: "",
     existingCertifications: "",
-    
-    // Dados IoT (se aplicavel)
     sensorsCount: "",
     sensorTypes: "",
   })
+
+  // Buscar dados do projeto
+  const { data, isLoading: loadingProject, error } = useSWR(`/api/iac/${id}`, fetcher)
+
+  // Preencher formulário com dados do projeto
+  useEffect(() => {
+    if (data?.iac) {
+      const project = data.iac
+      setFormData({
+        title: project.title || "",
+        description: project.description || "",
+        category: project.category || "",
+        projectStatus: project.project_status || "EM_ANDAMENTO",
+        dataCollectionType: project.data_collection_type || "MANUAL",
+        locationName: project.location_name || "",
+        locationState: project.location_state || "",
+        coordinates: project.coordinates || "",
+        startDate: project.start_date ? project.start_date.split("T")[0] : "",
+        endDate: project.end_date ? project.end_date.split("T")[0] : "",
+        estimatedCO2: project.carbon_credits?.toString() || "",
+        measurementUnit: project.measurement_unit || "tCO2e",
+        energyGenerated: project.energy_generated?.toString() || "",
+        wasteProcessed: project.waste_processed?.toString() || "",
+        areaSize: project.area_size?.toString() || "",
+        methodology: project.methodology || "",
+        certificationStandard: project.certification_standard || "",
+        existingCertifications: project.existing_certifications || "",
+        sensorsCount: project.sensors_count?.toString() || "",
+        sensorTypes: project.sensor_types || "",
+      })
+    }
+  }, [data])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      // Validacoes
       if (!formData.category) {
         throw new Error("Selecione uma categoria")
       }
@@ -167,41 +191,45 @@ export default function NewEnvironmentalProjectPage() {
         throw new Error("Preencha todas as informacoes obrigatorias")
       }
 
-      // Buscar a instituicao/empresa do usuario logado
-      const instRes = await fetch(`/api/institutions/by-user?user_id=${user?.id || ""}`)
-      const instData = await instRes.json()
-      
-      if (!instData.institution) {
-        throw new Error("Voce precisa ter uma empresa cadastrada para criar projetos")
-      }
-
-      // Criar projeto ambiental no banco
-      const res = await fetch("/api/environmental-projects", {
-        method: "POST",
+      const res = await fetch(`/api/iac/${id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
-          type: "AMBIENTAL",
-          institutionId: instData.institution.id,
-          userId: user?.id,
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          project_status: formData.projectStatus,
+          status: formData.projectStatus === "CONCLUIDO" ? "CONCLUIDO" : data?.iac?.status,
+          data_collection_type: formData.dataCollectionType,
+          location_name: formData.locationName,
+          location_state: formData.locationState,
+          coordinates: formData.coordinates,
+          measurement_unit: formData.measurementUnit,
+          energy_generated: parseFloat(formData.energyGenerated) || 0,
+          waste_processed: parseFloat(formData.wasteProcessed) || 0,
+          area_size: parseFloat(formData.areaSize) || 0,
+          certification_standard: formData.certificationStandard,
+          existing_certifications: formData.existingCertifications,
+          sensors_count: parseInt(formData.sensorsCount) || 0,
+          sensor_types: formData.sensorTypes,
         })
       })
 
-      const data = await res.json()
+      const responseData = await res.json()
       
       if (!res.ok) {
-        throw new Error(data.error || "Falha ao criar projeto")
+        throw new Error(responseData.error || "Falha ao atualizar projeto")
       }
 
       toast({
-        title: "Projeto Ambiental Criado!",
-        description: "Seu projeto foi cadastrado. Adicione evidencias e submeta para certificacao.",
+        title: "Projeto Atualizado!",
+        description: "As alteracoes foram salvas com sucesso.",
       })
-      router.push("/dashboard/environmental")
+      router.push(`/dashboard/environmental/${id}`)
     } catch (err) {
       toast({
         title: "Erro",
-        description: err instanceof Error ? err.message : "Falha ao criar projeto. Tente novamente.",
+        description: err instanceof Error ? err.message : "Falha ao atualizar projeto.",
         variant: "destructive",
       })
     } finally {
@@ -212,7 +240,6 @@ export default function NewEnvironmentalProjectPage() {
   const selectedCategory = ENVIRONMENTAL_CATEGORIES.find((c) => c.code === formData.category)
   const SelectedCategoryIcon = selectedCategory?.icon || Leaf
 
-  // Funções para gerenciar arquivos de evidência
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files) {
@@ -236,17 +263,52 @@ export default function NewEnvironmentalProjectPage() {
     return <File className="h-4 w-4" />
   }
 
+  if (loadingProject) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    )
+  }
+
+  if (error || !data?.iac) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-destructive">Erro ao carregar projeto</p>
+        <Button asChild className="mt-4">
+          <Link href="/dashboard/environmental">Voltar</Link>
+        </Button>
+      </div>
+    )
+  }
+
+  // Verificar se pode editar
+  if (["SUBMITTED", "VALIDATED", "CERTIFIED", "INSCRIBED", "MINTED"].includes(data.iac.status)) {
+    return (
+      <div className="text-center py-12">
+        <Shield className="h-12 w-12 mx-auto text-amber-500 mb-4" />
+        <h2 className="text-xl font-bold mb-2">Projeto Bloqueado para Edicao</h2>
+        <p className="text-muted-foreground mb-4">
+          Este projeto ja foi enviado para certificacao e nao pode mais ser editado.
+        </p>
+        <Button asChild>
+          <Link href={`/dashboard/environmental/${id}`}>Ver Projeto</Link>
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/dashboard/environmental">
+          <Link href={`/dashboard/environmental/${id}`}>
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold sm:text-3xl">Cadastrar Projeto Ambiental</h1>
-          <p className="text-foreground/60">Registre um projeto de impacto ambiental para certificacao e inscricao na blockchain</p>
+          <h1 className="text-2xl font-bold sm:text-3xl">Editar Projeto Ambiental</h1>
+          <p className="text-foreground/60">Atualize as informacoes do projeto</p>
         </div>
       </div>
 
@@ -288,7 +350,7 @@ export default function NewEnvironmentalProjectPage() {
                       <Leaf className="h-5 w-5 text-emerald-500" />
                       Informacoes do Projeto
                     </CardTitle>
-                    <CardDescription>Descreva seu projeto ambiental</CardDescription>
+                    <CardDescription>Atualize as informacoes do projeto</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -306,7 +368,7 @@ export default function NewEnvironmentalProjectPage() {
                       <Label htmlFor="description">Descricao do Projeto *</Label>
                       <Textarea
                         id="description"
-                        placeholder="Descreva o projeto, tecnologia utilizada, capacidade e impacto ambiental esperado..."
+                        placeholder="Descreva o projeto..."
                         rows={4}
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -401,7 +463,6 @@ export default function NewEnvironmentalProjectPage() {
                       <MapPin className="h-5 w-5 text-blue-500" />
                       Localizacao do Projeto
                     </CardTitle>
-                    <CardDescription>Onde o projeto esta sendo executado</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -440,37 +501,6 @@ export default function NewEnvironmentalProjectPage() {
                         value={formData.coordinates}
                         onChange={(e) => setFormData({ ...formData, coordinates: e.target.value })}
                       />
-                      <p className="text-xs text-muted-foreground">Coordenadas ajudam na verificacao por satelite</p>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="startDate">Data de Inicio *</Label>
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/60" />
-                          <Input
-                            id="startDate"
-                            type="date"
-                            className="pl-9"
-                            value={formData.startDate}
-                            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="endDate">Data de Termino (ou prevista)</Label>
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/60" />
-                          <Input
-                            id="endDate"
-                            type="date"
-                            className="pl-9"
-                            value={formData.endDate}
-                            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                          />
-                        </div>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -495,7 +525,7 @@ export default function NewEnvironmentalProjectPage() {
                     </CardTitle>
                     <CardDescription>
                       {selectedCategory 
-                        ? `Metricas para ${selectedCategory.name}: ${selectedCategory.metrics.join(", ")}` 
+                        ? `Metricas para ${selectedCategory.name}` 
                         : "Quantifique o impacto ambiental do projeto"
                       }
                     </CardDescription>
@@ -503,7 +533,7 @@ export default function NewEnvironmentalProjectPage() {
                   <CardContent className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="estimatedCO2">Reducao/Captura de CO2 Estimada *</Label>
+                        <Label htmlFor="estimatedCO2">Reducao/Captura de CO2 *</Label>
                         <div className="flex gap-2">
                           <Input
                             id="estimatedCO2"
@@ -511,7 +541,6 @@ export default function NewEnvironmentalProjectPage() {
                             placeholder="1000"
                             value={formData.estimatedCO2}
                             onChange={(e) => setFormData({ ...formData, estimatedCO2: e.target.value })}
-                            required
                           />
                           <Select
                             value={formData.measurementUnit}
@@ -530,52 +559,40 @@ export default function NewEnvironmentalProjectPage() {
 
                       {(formData.category === "ENERGIA_RENOVAVEL" || formData.category === "EFICIENCIA_ENERGETICA") && (
                         <div className="space-y-2">
-                          <Label htmlFor="energyGenerated">Energia Gerada/Economizada</Label>
-                          <div className="relative">
-                            <Zap className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/60" />
-                            <Input
-                              id="energyGenerated"
-                              type="number"
-                              placeholder="MWh por ano"
-                              className="pl-9"
-                              value={formData.energyGenerated}
-                              onChange={(e) => setFormData({ ...formData, energyGenerated: e.target.value })}
-                            />
-                          </div>
+                          <Label htmlFor="energyGenerated">Energia Gerada/Economizada (MWh/ano)</Label>
+                          <Input
+                            id="energyGenerated"
+                            type="number"
+                            placeholder="MWh por ano"
+                            value={formData.energyGenerated}
+                            onChange={(e) => setFormData({ ...formData, energyGenerated: e.target.value })}
+                          />
                         </div>
                       )}
 
                       {formData.category === "TRATAMENTO_RESIDUOS" && (
                         <div className="space-y-2">
-                          <Label htmlFor="wasteProcessed">Residuos Processados</Label>
-                          <div className="relative">
-                            <Recycle className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/60" />
-                            <Input
-                              id="wasteProcessed"
-                              type="number"
-                              placeholder="Toneladas por ano"
-                              className="pl-9"
-                              value={formData.wasteProcessed}
-                              onChange={(e) => setFormData({ ...formData, wasteProcessed: e.target.value })}
-                            />
-                          </div>
+                          <Label htmlFor="wasteProcessed">Residuos Processados (ton/ano)</Label>
+                          <Input
+                            id="wasteProcessed"
+                            type="number"
+                            placeholder="Toneladas por ano"
+                            value={formData.wasteProcessed}
+                            onChange={(e) => setFormData({ ...formData, wasteProcessed: e.target.value })}
+                          />
                         </div>
                       )}
 
                       {(formData.category === "REFLORESTAMENTO" || formData.category === "CAPTURA_CARBONO") && (
                         <div className="space-y-2">
-                          <Label htmlFor="areaSize">Area do Projeto</Label>
-                          <div className="relative">
-                            <TreePine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/60" />
-                            <Input
-                              id="areaSize"
-                              type="number"
-                              placeholder="Hectares"
-                              className="pl-9"
-                              value={formData.areaSize}
-                              onChange={(e) => setFormData({ ...formData, areaSize: e.target.value })}
-                            />
-                          </div>
+                          <Label htmlFor="areaSize">Area do Projeto (hectares)</Label>
+                          <Input
+                            id="areaSize"
+                            type="number"
+                            placeholder="Hectares"
+                            value={formData.areaSize}
+                            onChange={(e) => setFormData({ ...formData, areaSize: e.target.value })}
+                          />
                         </div>
                       )}
                     </div>
@@ -607,10 +624,6 @@ export default function NewEnvironmentalProjectPage() {
                             />
                           </div>
                         </div>
-                        <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                          <Info className="inline h-3 w-3 mr-1" />
-                          Apos criar o projeto, voce podera configurar a integracao com seus sensores IoT
-                        </p>
                       </div>
                     )}
                   </CardContent>
@@ -638,18 +651,16 @@ export default function NewEnvironmentalProjectPage() {
                       <FileText className="h-5 w-5 text-blue-500" />
                       Metodologia e Certificacao
                     </CardTitle>
-                    <CardDescription>Documentacao tecnica para validacao por certificadores</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="methodology">Metodologia Utilizada *</Label>
+                      <Label htmlFor="methodology">Metodologia Utilizada</Label>
                       <Textarea
                         id="methodology"
-                        placeholder="Descreva a metodologia de medicao e calculo de impacto ambiental utilizada..."
+                        placeholder="Descreva a metodologia..."
                         rows={4}
                         value={formData.methodology}
                         onChange={(e) => setFormData({ ...formData, methodology: e.target.value })}
-                        required
                       />
                     </div>
 
@@ -660,7 +671,7 @@ export default function NewEnvironmentalProjectPage() {
                         onValueChange={(value) => setFormData({ ...formData, certificationStandard: value })}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione um padrao reconhecido" />
+                          <SelectValue placeholder="Selecione um padrao" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="VCS">Verified Carbon Standard (VCS)</SelectItem>
@@ -678,7 +689,7 @@ export default function NewEnvironmentalProjectPage() {
                       <Label htmlFor="existingCertifications">Certificacoes Existentes</Label>
                       <Textarea
                         id="existingCertifications"
-                        placeholder="Liste certificacoes ou auditorias ja realizadas neste projeto..."
+                        placeholder="Liste certificacoes ja realizadas..."
                         rows={2}
                         value={formData.existingCertifications}
                         onChange={(e) => setFormData({ ...formData, existingCertifications: e.target.value })}
@@ -689,13 +700,9 @@ export default function NewEnvironmentalProjectPage() {
                     <div className="space-y-3">
                       <Label className="flex items-center gap-2">
                         <Upload className="h-4 w-4" />
-                        Evidencias e Documentos
+                        Adicionar Evidencias
                       </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Anexe fotos, relatorios e documentos que comprovam o impacto ambiental do projeto
-                      </p>
                       
-                      {/* Área de Upload */}
                       <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-emerald-500/50 transition-colors">
                         <input
                           type="file"
@@ -707,14 +714,13 @@ export default function NewEnvironmentalProjectPage() {
                         />
                         <label htmlFor="evidence-upload" className="cursor-pointer">
                           <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-                          <p className="font-medium text-foreground">Clique para selecionar arquivos</p>
+                          <p className="font-medium">Clique para selecionar arquivos</p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            Fotos, PDFs, planilhas (max 10MB cada)
+                            Fotos, PDFs, planilhas
                           </p>
                         </label>
                       </div>
 
-                      {/* Lista de Arquivos Selecionados */}
                       {evidenceFiles.length > 0 && (
                         <div className="space-y-2">
                           <p className="text-sm font-medium">{evidenceFiles.length} arquivo(s) selecionado(s)</p>
@@ -731,7 +737,7 @@ export default function NewEnvironmentalProjectPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => removeFile(index)}
-                                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                  className="h-6 w-6 p-0 text-destructive"
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
@@ -740,23 +746,6 @@ export default function NewEnvironmentalProjectPage() {
                           </div>
                         </div>
                       )}
-                    </div>
-
-                    <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 p-4">
-                      <h4 className="font-medium text-emerald-800 dark:text-emerald-400 flex items-center gap-2 mb-2">
-                        <Info className="h-4 w-4" />
-                        Documentos Recomendados para Certificacao
-                      </h4>
-                      <ul className="text-sm text-emerald-700 dark:text-emerald-400 space-y-1 list-disc list-inside">
-                        <li>Fotos do projeto em operacao</li>
-                        <li>Relatorios tecnicos de medicao</li>
-                        <li>Dados de sensores ou planilhas de monitoramento</li>
-                        <li>Licencas ambientais (se aplicavel)</li>
-                        <li>Laudos de auditoria externa (se houver)</li>
-                      </ul>
-                      <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-2">
-                        Estes arquivos serao usados para gerar o relatorio PDF e o hash de certificacao na blockchain
-                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -770,12 +759,12 @@ export default function NewEnvironmentalProjectPage() {
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Criando...
+                        Salvando...
                       </>
                     ) : (
                       <>
-                        <Leaf className="mr-2 h-4 w-4" />
-                        Criar Projeto Ambiental
+                        <Save className="mr-2 h-4 w-4" />
+                        Salvar Alteracoes
                       </>
                     )}
                   </Button>
@@ -784,94 +773,20 @@ export default function NewEnvironmentalProjectPage() {
             )}
           </div>
 
-          {/* Sidebar - Trilha do Projeto Ambiental */}
+          {/* Sidebar */}
           <div className="space-y-6">
-            <Card className="border-emerald-200">
-              <CardHeader className="bg-emerald-50 dark:bg-emerald-950/20">
-                <CardTitle className="text-emerald-800 dark:text-emerald-400">Trilha de Certificacao Ambiental</CardTitle>
-                <CardDescription>Fluxo de validacao para projetos ambientais</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div className="space-y-4 text-sm">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold">
-                      1
-                    </div>
-                    <div>
-                      <p className="font-medium">Cadastro do Projeto</p>
-                      <p className="text-xs text-foreground/60">Informacoes, metricas e metodologia</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">
-                      2
-                    </div>
-                    <div>
-                      <p className="font-medium">Coleta de Dados</p>
-                      <p className="text-xs text-foreground/60">IoT automatico ou entrada manual</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-white text-xs font-bold">
-                      3
-                    </div>
-                    <div>
-                      <p className="font-medium">Submissao para Certificacao</p>
-                      <p className="text-xs text-foreground/60">Envio de evidencias e documentos</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-purple-500 text-white text-xs font-bold">
-                      <Shield className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Analise por Certificadores</p>
-                      <p className="text-xs text-foreground/60">Validacao tecnica especializada</p>
-                      <Badge variant="outline" className="mt-1 text-xs border-purple-300 text-purple-600">
-                        Analistas Certificadores
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white text-xs font-bold">
-                      <Bitcoin className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Inscricao Blockchain</p>
-                      <p className="text-xs text-foreground/60">Registro na Polygon Network</p>
-                      <Badge variant="outline" className="mt-1 text-xs border-amber-300 text-amber-600">
-                        Certificado Imutavel
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200">
+            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
               <CardHeader>
-                <CardTitle className="text-emerald-800 dark:text-emerald-400 text-sm flex items-center gap-2">
+                <CardTitle className="text-amber-800 dark:text-amber-400 text-sm flex items-center gap-2">
                   <Info className="h-4 w-4" />
-                  Diferenca do Projeto Social
+                  Editando Projeto
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-emerald-600" />
-                  <span>Sem necessidade de doacoes</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-emerald-600" />
-                  <span>Validacao por certificadores tecnicos</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-emerald-600" />
-                  <span>Integracao com sensores IoT</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-emerald-600" />
-                  <span>Creditos de carbono tokenizados</span>
-                </div>
+              <CardContent className="text-sm text-amber-700 dark:text-amber-400">
+                <p>
+                  Apos finalizar as edicoes, voce pode solicitar certificacao na pagina do projeto.
+                  Uma vez enviado para certificacao, o projeto nao podera mais ser editado.
+                </p>
               </CardContent>
             </Card>
           </div>

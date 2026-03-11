@@ -28,11 +28,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // Buscar usuario - usando colunas que existem no schema atual
+    // Buscar usuario - com dados da instituição vinculada
     const users = await sql`
-      SELECT id, email, password_hash, name, role, is_verified, is_active
-      FROM users
-      WHERE email = ${email.toLowerCase()}
+      SELECT 
+        u.id, u.email, u.password_hash, u.name, u.role, u.is_verified, u.is_active,
+        i.id as institution_id, i.name as institution_name, i.type as institution_type
+      FROM users u
+      LEFT JOIN institutions i ON i.user_id = u.id
+      WHERE u.email = ${email.toLowerCase()}
     `
 
     if (users.length === 0) {
@@ -93,6 +96,9 @@ export async function POST(request: Request) {
         name: user.name,
         role: user.role,
         isVerified: isVerified,
+        institutionId: user.institution_id,
+        institutionName: user.institution_name,
+        institutionType: user.institution_type,
       },
       token,
     })

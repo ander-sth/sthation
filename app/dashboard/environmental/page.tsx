@@ -26,6 +26,8 @@ import {
   Recycle,
   TreePine,
   Loader2,
+  DollarSign,
+  Bell,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -50,7 +52,9 @@ const ENVIRONMENTAL_CATEGORIES = [
 // Status dos projetos ambientais
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   DRAFT: { label: "Rascunho", color: "bg-gray-500/10 text-gray-600" },
+  EM_ANDAMENTO: { label: "Em Andamento", color: "bg-blue-500/10 text-blue-600" },
   COLLECTING: { label: "Coletando Dados IoT", color: "bg-blue-500/10 text-blue-600" },
+  CONCLUIDO: { label: "Concluido", color: "bg-emerald-500/10 text-emerald-600" },
   SUBMITTED: { label: "Aguardando Certificacao", color: "bg-amber-500/10 text-amber-600" },
   VALIDATED: { label: "Validado", color: "bg-emerald-500/10 text-emerald-600" },
   CERTIFIED: { label: "Certificado", color: "bg-emerald-500/10 text-emerald-600" },
@@ -65,12 +69,30 @@ export default function EnvironmentalProjectsPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [categoryFilter, setCategoryFilter] = useState("all")
 
-  // Buscar projetos ambientais da API (dados reais do banco) - filtrados pelo owner_id do usuario
+  // Buscar projetos ambientais da API (dados reais do banco) - filtrados pela instituição do usuario
   const { data, isLoading } = useSWR(
-    user?.id ? `/api/iac?type=AMBIENTAL&owner_id=${user.id}&limit=50` : null, 
+    user?.institutionId ? `/api/iac?type=AMBIENTAL&institutionId=${user.institutionId}&limit=50` : null, 
     fetcher, 
     { revalidateOnFocus: false }
   )
+
+  // Buscar propostas de certificação para projetos da instituição
+  const { data: proposalsData } = useSWR(
+    user?.institutionId ? `/api/certification/proposals?institutionId=${user.institutionId}` : null,
+    fetcher,
+    { revalidateOnFocus: false }
+  )
+  
+  // Agrupar propostas por projeto
+  const proposalsByProject: Record<string, any[]> = {}
+  if (proposalsData?.proposals) {
+    proposalsData.proposals.forEach((p: any) => {
+      if (!proposalsByProject[p.iac_id]) {
+        proposalsByProject[p.iac_id] = []
+      }
+      proposalsByProject[p.iac_id].push(p)
+    })
+  }
 
   const environmentalProjects = (data?.projects || []).map((p: any) => ({
     id: p.id,
@@ -250,15 +272,26 @@ export default function EnvironmentalProjectsPage() {
         <CardContent>
           <div className="space-y-4">
             {filtered.map((project) => {
-              const statusCfg = STATUS_CONFIG[project.status]
+              const statusCfg = STATUS_CONFIG[project.status] || { label: project.status, color: "bg-gray-500/10 text-gray-600" }
               const category = ENVIRONMENTAL_CATEGORIES.find((c) => c.code === project.category)
               const CategoryIcon = category?.icon || Leaf
               const canSubmit = project.status === "COLLECTING" && project.collectionProgress >= 70
+              const projectProposals = proposalsByProject[project.id] || []
+              const pendingProposals = projectProposals.filter((p: any) => p.status === "PENDING")
+              const acceptedProposal = projectProposals.find((p: any) => p.status === "ACCEPTED")
+              const hasProposals = pendingProposals.length > 0
+              const hasAcceptedProposal = !!acceptedProposal
 
               return (
                 <div
                   key={project.id}
-                  className="flex flex-col gap-4 rounded-lg border border-border p-4 hover:border-[#0a2f2f]/30 transition-colors"
+                  className={`flex flex-col gap-4 rounded-lg border p-4 transition-colors ${
+                    hasAcceptedProposal
+                      ? "border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/10"
+                      : hasProposals 
+                      ? "border-amber-400 bg-amber-50/50 dark:bg-amber-950/10" 
+                      : "border-border hover:border-[#0a2f2f]/30"
+                  }`}
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex-1">
@@ -266,7 +299,26 @@ export default function EnvironmentalProjectsPage() {
                       <div className="mb-2 flex flex-wrap items-center gap-2">
                         <CategoryIcon className="h-5 w-5 text-[#0a2f2f]" />
                         <h3 className="font-semibold">{project.title}</h3>
-                        <Badge className={statusCfg.color}>{statusCfg.label}</Badge>
+                        {/* Mostra status do projeto OU badge de certificação em andamento */}
+                        {!hasAcceptedProposal && (
+                          <Badge className={statusCfg.color}>{statusCfg.label}</Badge>
+                        )}
+                        {hasAcceptedProposal && project.status !== "CERTIFIED" && (
+                          <Badge className="bg-amber-500 text-white">
+                            Em Certificacao
+                          </Badge>
+                        )}
+                        {project.status === "CERTIFIED" && (
+                          <Badge className="bg-emerald-600 text-white">
+                            Certificado
+                          </Badge>
+                        )}
+                        {hasProposals && !hasAcceptedProposal && (
+                          <Badge className="bg-amber-500 text-white animate-pulse">
+                            <Bell className="mr-1 h-3 w-3" />
+                            {pendingProposals.length} proposta{pendingProposals.length > 1 ? "s" : ""} de certificacao
+                          </Badge>
+                        )}
                       </div>
 
                       <p className="mb-3 text-sm text-foreground/60 line-clamp-2">{project.description}</p>
@@ -334,6 +386,46 @@ export default function EnvironmentalProjectsPage() {
                         <p className="mt-2 text-xs text-amber-600">
                           Coleta minima de 70% necessaria para submeter a certificacao.
                         </p>
+                      )}
+
+                      {/* Proposta aceita - Em certificação */}
+                      {hasAcceptedProposal && (
+                        <div className="mt-3 p-3 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-400">
+                          <div className="flex items-center gap-2">
+                            <FileCheck className="h-4 w-4 text-emerald-700" />
+                            <span className="text-sm font-medium text-emerald-800 dark:text-emerald-400">
+                              Proposta aceita! Certificador: {acceptedProposal.certifier_name} - {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(acceptedProposal.proposed_value)}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-500">
+                            Aguardando analise e emissao do certificado com hash blockchain.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Propostas pendentes */}
+                      {hasProposals && !hasAcceptedProposal && (
+                        <div className="mt-3 p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-300">
+                          <div className="flex items-center gap-2 mb-2">
+                            <DollarSign className="h-4 w-4 text-amber-700" />
+                            <span className="text-sm font-medium text-amber-800 dark:text-amber-400">
+                              Propostas de Certificacao Recebidas
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {pendingProposals.map((proposal: any) => (
+                              <div key={proposal.id} className="flex items-center gap-2 bg-white dark:bg-background rounded px-2 py-1 text-sm">
+                                <span className="text-foreground/70">{proposal.certifier_name}:</span>
+                                <span className="font-bold text-emerald-600">
+                                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(proposal.proposed_value)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="mt-2 text-xs text-amber-700 dark:text-amber-500">
+                            Clique em "Ver" para analisar e aceitar uma proposta.
+                          </p>
+                        </div>
                       )}
                     </div>
 

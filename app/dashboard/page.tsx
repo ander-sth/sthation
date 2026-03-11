@@ -5,6 +5,7 @@ import type React from "react"
 import { useAuth } from "@/lib/auth-context"
 import { UserRole, ROLE_PERMISSIONS } from "@/lib/types/users"
 import { useApiData } from "@/hooks/use-api-data"
+import useSWR from "swr"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -87,7 +88,7 @@ export default function DashboardPage() {
 
         {/* Empresa Ambiental - projetos ambientais com dados IoT e certificacao */}
         {user.role === UserRole.EMPRESA_AMBIENTAL && (
-          <EmpresaAmbientalStats userId={user.id} />
+          <EmpresaAmbientalStats userId={user.id} institutionId={user.institutionId} />
         )}
 
         {/* Checker */}
@@ -575,10 +576,10 @@ function MyEnvironmentalProjects() {
             <Leaf className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="font-medium mb-1">Nenhum projeto cadastrado</h3>
             <p className="text-sm text-muted-foreground mb-4">Cadastre seu primeiro projeto ambiental</p>
-            <Button asChild>
-              <Link href="/dashboard/iac/new">
+            <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
+              <Link href="/dashboard/environmental/new">
                 <Plus className="mr-2 h-4 w-4" />
-                Criar Projeto
+                Criar Projeto Ambiental
               </Link>
             </Button>
           </div>
@@ -660,41 +661,63 @@ function IoTSensorOverview() {
 }
 
 // Stats para Empresa Ambiental - busca dados reais do banco
-function EmpresaAmbientalStats({ userId }: { userId: string }) {
-  const { data, isLoading } = useApiData<any>(`/api/iac?type=AMBIENTAL&owner_id=${userId}`, {})
+function EmpresaAmbientalStats({ userId, institutionId }: { userId: string; institutionId?: string }) {
+  const { data, isLoading, error } = useSWR(
+    institutionId ? `/api/iac?type=AMBIENTAL&institutionId=${institutionId}` : null,
+    (url) => fetch(url).then(res => res.json()),
+    { 
+      revalidateOnFocus: false,
+      errorRetryCount: 3,
+      errorRetryInterval: 2000,
+    }
+  )
   const projects = data?.projects || []
   
   const totalProjects = projects.length
-  const collectingProjects = projects.filter((p: any) => p.status === "COLLECTING" || p.status === "SUBMITTED").length
-  const certifiedProjects = projects.filter((p: any) => p.status === "CERTIFIED" || p.status === "INSCRIBED").length
-  const inscribedProjects = projects.filter((p: any) => p.status === "INSCRIBED").length
-  const totalCO2 = projects.reduce((sum: number, p: any) => sum + (p.carbon_credits || p.co2_avoided || 0), 0)
+  const activeProjects = projects.filter((p: any) => 
+    ["DRAFT", "EM_ANDAMENTO", "CONCLUIDO", "COLLECTING", "SUBMITTED", "VALIDATED"].includes(p.status)
+  ).length
+  const certifiedProjects = projects.filter((p: any) => p.status === "CERTIFIED" || p.status === "INSCRIBED" || p.status === "MINTED").length
+  const awaitingCertification = projects.filter((p: any) => p.status === "SUBMITTED" || p.status === "VALIDATED").length
+  const totalCO2 = projects.reduce((sum: number, p: any) => sum + (p.co2_equivalent || p.carbon_credits || p.co2_avoided || 0), 0)
   const totalSensors = projects.reduce((sum: number, p: any) => sum + (p.sensors_count || 0), 0)
+  const totalWasteProcessed = projects.reduce((sum: number, p: any) => sum + (p.waste_processed || 0), 0)
 
   if (isLoading) {
     return (
       <>
-        <StatCard title="Projetos Ativos" value="..." description="Carregando..." icon={FileCheck} highlight />
-        <StatCard title="Sensores IoT" value="..." description="Carregando..." icon={Leaf} />
+        <StatCard title="Projetos" value="..." description="Carregando..." icon={FileCheck} highlight />
+        <StatCard title="Residuos Processados" value="..." description="Carregando..." icon={Leaf} />
         <StatCard title="tCO2e Evitados" value="..." description="Carregando..." icon={TrendingUp} />
         <StatCard title="Certificados" value="..." description="Carregando..." icon={Award} />
       </>
     )
   }
 
+  if (error && !data) {
+    return (
+      <>
+        <StatCard title="Projetos" value="-" description="Erro ao carregar" icon={FileCheck} highlight />
+        <StatCard title="Residuos Processados" value="-" description="Erro ao carregar" icon={Leaf} />
+        <StatCard title="tCO2e Evitados" value="-" description="Erro ao carregar" icon={TrendingUp} />
+        <StatCard title="Certificados" value="-" description="Erro ao carregar" icon={Award} />
+      </>
+    )
+  }
+
   return (
     <>
+<StatCard
+  title="Projetos"
+  value={totalProjects.toString()}
+  description={`${activeProjects} ativos, ${awaitingCertification} aguardando certificacao`}
+  icon={FileCheck}
+  highlight
+  />
       <StatCard 
-        title="Projetos Ativos" 
-        value={totalProjects.toString()} 
-        description={`${collectingProjects} coletando dados IoT`} 
-        icon={FileCheck} 
-        highlight 
-      />
-      <StatCard 
-        title="Sensores IoT" 
-        value={totalSensors.toString()} 
-        description="conectados aos projetos" 
+        title="Residuos Processados" 
+        value={`${totalWasteProcessed.toLocaleString("pt-BR")} kg`} 
+        description={`${totalSensors} sensores IoT conectados`} 
         icon={Leaf} 
       />
       <StatCard 
@@ -704,12 +727,12 @@ function EmpresaAmbientalStats({ userId }: { userId: string }) {
         icon={TrendingUp} 
         trend={totalCO2 > 0 ? "up" : undefined} 
       />
-      <StatCard 
-        title="Certificados" 
-        value={certifiedProjects.toString()} 
-        description={`${inscribedProjects} inscrito na blockchain`} 
-        icon={Award} 
-      />
+<StatCard
+  title="Certificados"
+  value={certifiedProjects.toString()}
+  description={certifiedProjects > 0 ? "com hash na blockchain" : "aguardando certificacao"}
+  icon={Award}
+  />
     </>
   )
 }
@@ -799,8 +822,15 @@ function PendingInscriptions() {
 
 // Estatisticas gerais da plataforma - visiveis para todos
 function PlatformStats() {
-  // Usar nova API para evitar cache com codigo antigo
-  const { data } = useApiData<any>("/api/plataforma-stats", {})
+  // Usar SWR direto com retry para melhor confiabilidade
+  const { data } = useSWR("/api/plataforma-stats", 
+    (url) => fetch(url).then(res => res.json()),
+    { 
+      revalidateOnFocus: false,
+      errorRetryCount: 3,
+      errorRetryInterval: 2000,
+    }
+  )
   const stats = data?.stats || {}
   
   return (

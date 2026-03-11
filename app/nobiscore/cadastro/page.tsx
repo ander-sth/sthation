@@ -73,11 +73,11 @@ export default function NobisCoreCadastroPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-white text-black">
       {/* Header */}
-      <header className="border-b border-white/10">
+      <header className="border-b border-black/10">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/nobiscore" className="flex items-center gap-2 text-white/60 hover:text-white transition-colors w-fit">
+          <Link href="/nobiscore" className="flex items-center gap-2 text-black/60 hover:text-black transition-colors w-fit">
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </Link>
@@ -90,12 +90,12 @@ export default function NobisCoreCadastroPage() {
           {/* Logo */}
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold tracking-tight mb-2">NobisCore</h1>
-            <p className="text-white/60">Criar nova conta</p>
+            <p className="text-black/60">Criar nova conta</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-white/80">Nome completo</Label>
+              <Label htmlFor="name" className="text-black/80">Nome completo</Label>
               <Input
                 id="name"
                 type="text"
@@ -103,12 +103,12 @@ export default function NobisCoreCadastroPage() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Seu nome"
                 required
-                className="bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-white/40"
+                className="bg-black/5 border-black/20 text-black placeholder:text-black/40 focus:border-black/40"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-white/80">Email</Label>
+              <Label htmlFor="email" className="text-black/80">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -116,12 +116,12 @@ export default function NobisCoreCadastroPage() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="seu@email.com"
                 required
-                className="bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-white/40"
+                className="bg-black/5 border-black/20 text-black placeholder:text-black/40 focus:border-black/40"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-white/80">Senha</Label>
+              <Label htmlFor="password" className="text-black/80">Senha</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -130,12 +130,12 @@ export default function NobisCoreCadastroPage() {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Minimo 6 caracteres"
                   required
-                  className="bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-white/40 pr-10"
+                  className="bg-black/5 border-black/20 text-black placeholder:text-black/40 focus:border-black/40 pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -145,9 +145,9 @@ export default function NobisCoreCadastroPage() {
                   {passwordValid ? (
                     <Check className="h-3 w-3 text-green-500" />
                   ) : (
-                    <div className="h-3 w-3 rounded-full border border-white/20" />
+                    <div className="h-3 w-3 rounded-full border border-black/20" />
                   )}
-                  <span className={passwordValid ? "text-green-500" : "text-white/40"}>
+                  <span className={passwordValid ? "text-green-500" : "text-black/40"}>
                     Minimo 6 caracteres
                   </span>
                 </div>
@@ -155,7 +155,7 @@ export default function NobisCoreCadastroPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-white/80">Confirmar senha</Label>
+              <Label htmlFor="confirmPassword" className="text-black/80">Confirmar senha</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -163,10 +163,10 @@ export default function NobisCoreCadastroPage() {
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 placeholder="Digite novamente"
                 required
-                className="bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-white/40"
+                className="bg-black/5 border-black/20 text-black placeholder:text-black/40 focus:border-black/40"
               />
               {formData.confirmPassword && !passwordMatch && (
-                <p className="text-xs text-red-400">As senhas nao coincidem</p>
+                <p className="text-xs text-red-500">As senhas nao coincidem</p>
               )}
             </div>
 
@@ -175,20 +175,20 @@ export default function NobisCoreCadastroPage() {
                 id="terms"
                 checked={acceptedTerms}
                 onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
-                className="mt-1 border-white/20 data-[state=checked]:bg-white data-[state=checked]:text-black"
+                className="mt-1 border-black/20 data-[state=checked]:bg-black data-[state=checked]:text-white"
               />
-              <label htmlFor="terms" className="text-sm text-white/60 cursor-pointer">
+              <label htmlFor="terms" className="text-sm text-black/60 cursor-pointer">
                 Concordo com os{" "}
-                <Link href="/termos" className="text-white hover:underline">Termos de Uso</Link>
+                <Link href="/termos" className="text-black font-medium hover:underline">Termos de Uso</Link>
                 {" "}e{" "}
-                <Link href="/privacidade" className="text-white hover:underline">Politica de Privacidade</Link>
+                <Link href="/privacidade" className="text-black font-medium hover:underline">Politica de Privacidade</Link>
               </label>
             </div>
 
             <Button
               type="submit"
               disabled={!canSubmit || isLoading}
-              className="w-full bg-white text-black hover:bg-white/90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-black text-white hover:bg-black/90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>
@@ -202,9 +202,9 @@ export default function NobisCoreCadastroPage() {
           </form>
 
           <div className="mt-8 text-center">
-            <p className="text-white/60">
+            <p className="text-black/60">
               Ja tem uma conta?{" "}
-              <Link href="/nobiscore/login" className="text-white hover:underline">
+              <Link href="/nobiscore/login" className="text-black font-medium hover:underline">
                 Entrar
               </Link>
             </p>
@@ -212,17 +212,17 @@ export default function NobisCoreCadastroPage() {
 
           {/* Features */}
           <div className="mt-12 grid grid-cols-3 gap-4 text-center">
-            <div className="p-4 border border-white/10 rounded-lg">
+            <div className="p-4 border border-black/10 rounded-lg">
               <div className="text-2xl mb-2">&#x26A1;</div>
-              <p className="text-xs text-white/60">Tokenize impacto</p>
+              <p className="text-xs text-black/60">Tokenize impacto</p>
             </div>
-            <div className="p-4 border border-white/10 rounded-lg">
+            <div className="p-4 border border-black/10 rounded-lg">
               <div className="text-2xl mb-2">&#x1F512;</div>
-              <p className="text-xs text-white/60">Imutavel no Bitcoin</p>
+              <p className="text-xs text-black/60">Imutavel no Bitcoin</p>
             </div>
-            <div className="p-4 border border-white/10 rounded-lg">
+            <div className="p-4 border border-black/10 rounded-lg">
               <div className="text-2xl mb-2">&#x1F310;</div>
-              <p className="text-xs text-white/60">Mercado global</p>
+              <p className="text-xs text-black/60">Mercado global</p>
             </div>
           </div>
         </div>

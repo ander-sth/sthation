@@ -84,9 +84,9 @@ const navItems: NavItem[] = [
 
   // Certificacao Ambiental - Exclusivo Analistas Certificadores
   {
-    href: "/dashboard/technical-review",
+    href: "/dashboard/certification",
     icon: Award,
-    label: "Certificacao Ambiental",
+    label: "Certificar Projetos",
     roles: [UserRole.ANALISTA_CERTIFICADOR],
   },
 
@@ -124,7 +124,7 @@ const navItems: NavItem[] = [
 
   // Dashboard de Impacto - exceto admin (tem painel proprio)
   { 
-    href: "/dashboard/impact", 
+    href: "/dashboard/impact-dashboard", 
     icon: BarChart3, 
     label: "Dashboard de Impacto",
     roles: [UserRole.DOADOR, UserRole.INSTITUICAO_SOCIAL, UserRole.EMPRESA_AMBIENTAL, UserRole.CHECKER, UserRole.ANALISTA_CERTIFICADOR, UserRole.PREFEITURA],

@@ -64,8 +64,15 @@ export function useApiData<T>(
     {
       fallbackData: isDemoMode ? fallbackData : undefined,
       revalidateOnFocus,
+      errorRetryCount: 3,
+      errorRetryInterval: 1000,
       onError: (err) => {
         console.error("[useApiData] Error fetching:", endpoint, err)
+      },
+      onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+        // Retry até 3 vezes com delay
+        if (retryCount >= 3) return
+        setTimeout(() => revalidate({ retryCount }), 1000 * (retryCount + 1))
       },
     }
   )

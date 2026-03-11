@@ -32,6 +32,9 @@ interface User {
   isVerified: boolean
   certifications?: string[]
   checkerScore?: number
+  institutionId?: string
+  institutionName?: string
+  institutionType?: string
 }
 
 interface AuthContextType {
@@ -78,6 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: data.user.name,
         role: mappedRole,
         isVerified: data.user.isVerified,
+        institutionId: data.user.institutionId,
+        institutionName: data.user.institutionName,
+        institutionType: data.user.institutionType,
       }
       setUser(userData)
       setToken(data.token)

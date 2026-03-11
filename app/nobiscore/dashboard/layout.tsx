@@ -89,7 +89,7 @@ function WalletBadge({
     return (
       <button
         onClick={onConnect}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-dashed border-white/20 text-white/60 hover:text-white hover:border-white/40 transition-colors text-xs"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-dashed border-black/20 text-black/60 hover:text-black hover:border-black/40 transition-colors text-xs"
       >
         <Link2 className="w-3 h-3" />
         Conectar {label}
@@ -101,21 +101,21 @@ function WalletBadge({
     <div className="flex items-center gap-2">
       <Badge 
         variant="outline" 
-        className="font-mono text-xs border px-2 py-1 border-white/20 text-white/80 bg-white/5"
+        className="font-mono text-xs border px-2 py-1 border-black/20 text-black/80 bg-black/5"
       >
         <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           {label}
         </span>
       </Badge>
-      <code className="text-xs text-white/40 font-mono hidden sm:block">
+      <code className="text-xs text-black/40 font-mono hidden sm:block">
         {truncateAddress(address)}
       </code>
       <button 
         onClick={copyAddress}
-        className="text-white/40 hover:text-white transition-colors"
+        className="text-black/40 hover:text-black transition-colors"
       >
-        {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+        {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
       </button>
     </div>
   )
@@ -327,55 +327,55 @@ export default function NobisCoreDashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-black"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gray-50 text-black">
       {/* Sidebar */}
       <aside 
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen bg-neutral-950 border-r border-white/10 transition-all duration-300",
+          "fixed left-0 top-0 z-40 h-screen bg-white border-r border-black/10 transition-all duration-300",
           collapsed ? "w-16" : "w-64"
         )}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className={cn(
-            "flex items-center h-16 border-b border-white/10 px-4",
+            "flex items-center h-16 border-b border-black/10 px-4",
             collapsed ? "justify-center" : "justify-between"
           )}>
             {!collapsed && (
               <Link href="/nobiscore" className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-black" />
+                <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-white" />
                 </div>
                 <div>
                   <span className="font-semibold tracking-tight">NobisCore</span>
-                  <span className="text-[10px] text-white/40 block -mt-0.5">by Sthation</span>
+                  <span className="text-[10px] text-black/40 block -mt-0.5">by Sthation</span>
                 </div>
               </Link>
             )}
             {collapsed && (
-              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-                <Zap className="w-4 h-4 text-black" />
+              <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center">
+                <Zap className="w-4 h-4 text-white" />
               </div>
             )}
           </div>
 
           {/* User Info */}
           {!collapsed && user && (
-            <div className="p-4 border-b border-white/10">
+            <div className="p-4 border-b border-black/10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-                  <User className="w-5 h-5 text-white/60" />
+                <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center">
+                  <User className="w-5 h-5 text-black/60" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{user.name}</p>
-                  <p className="text-xs text-white/40 truncate">{user.email}</p>
+                  <p className="text-xs text-black/40 truncate">{user.email}</p>
                 </div>
               </div>
             </div>
@@ -396,8 +396,8 @@ export default function NobisCoreDashboardLayout({
                         className={cn(
                           "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                           isActive 
-                            ? "bg-white text-black" 
-                            : "text-white/60 hover:text-white hover:bg-white/10",
+                            ? "bg-black text-white" 
+                            : "text-black/60 hover:text-black hover:bg-black/5",
                           collapsed && "justify-center px-0"
                         )}
                       >
@@ -406,7 +406,7 @@ export default function NobisCoreDashboardLayout({
                       </Link>
                     </TooltipTrigger>
                     {collapsed && (
-                      <TooltipContent side="right" className="bg-neutral-800 text-white border-white/10">
+                      <TooltipContent side="right" className="bg-white text-black border-black/10">
                         {item.name}
                       </TooltipContent>
                     )}
@@ -418,21 +418,21 @@ export default function NobisCoreDashboardLayout({
 
           {/* Carteiras conectadas */}
           {!collapsed && (
-            <div className="p-3 border-t border-white/10 space-y-2">
-              <p className="text-xs text-white/40 px-3 uppercase tracking-wider">Carteiras</p>
+            <div className="p-3 border-t border-black/10 space-y-2">
+              <p className="text-xs text-black/40 px-3 uppercase tracking-wider">Carteiras</p>
               
               {/* EVM Wallet */}
-              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5">
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-black/5">
                 <div className="flex items-center gap-2">
-                  <div className={cn("w-2 h-2 rounded-full", evmAddress ? "bg-green-400" : "bg-white/20")} />
-                  <span className="text-xs text-white/60">Polygon</span>
+                  <div className={cn("w-2 h-2 rounded-full", evmAddress ? "bg-green-500" : "bg-black/20")} />
+                  <span className="text-xs text-black/60">Polygon</span>
                 </div>
                 {evmAddress ? (
                   <div className="flex items-center gap-2">
-                    <code className="text-[10px] text-white/40">{truncateAddress(evmAddress)}</code>
+                    <code className="text-[10px] text-black/40">{truncateAddress(evmAddress)}</code>
                     <button 
                       onClick={() => handleDisconnectWallet("evm")}
-                      className="text-xs text-white/40 hover:text-white"
+                      className="text-xs text-black/40 hover:text-black"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -440,7 +440,7 @@ export default function NobisCoreDashboardLayout({
                 ) : (
                   <button 
                     onClick={() => handleConnectWallet("evm")}
-                    className="text-xs text-white/60 hover:text-white"
+                    className="text-xs text-black/60 hover:text-black"
                   >
                     Conectar
                   </button>
@@ -448,17 +448,17 @@ export default function NobisCoreDashboardLayout({
               </div>
 
               {/* BTC Wallet */}
-              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5">
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-black/5">
                 <div className="flex items-center gap-2">
-                  <div className={cn("w-2 h-2 rounded-full", btcAddress ? "bg-green-400" : "bg-white/20")} />
-                  <span className="text-xs text-white/60">Bitcoin</span>
+                  <div className={cn("w-2 h-2 rounded-full", btcAddress ? "bg-green-500" : "bg-black/20")} />
+                  <span className="text-xs text-black/60">Bitcoin</span>
                 </div>
                 {btcAddress ? (
                   <div className="flex items-center gap-2">
-                    <code className="text-[10px] text-white/40">{truncateAddress(btcAddress)}</code>
+                    <code className="text-[10px] text-black/40">{truncateAddress(btcAddress)}</code>
                     <button 
                       onClick={() => handleDisconnectWallet("btc")}
-                      className="text-xs text-white/40 hover:text-white"
+                      className="text-xs text-black/40 hover:text-black"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -466,7 +466,7 @@ export default function NobisCoreDashboardLayout({
                 ) : (
                   <button 
                     onClick={() => handleConnectWallet("btc")}
-                    className="text-xs text-white/60 hover:text-white"
+                    className="text-xs text-black/60 hover:text-black"
                   >
                     Conectar
                   </button>
@@ -476,11 +476,11 @@ export default function NobisCoreDashboardLayout({
           )}
 
           {/* Bottom Actions */}
-          <div className="p-3 border-t border-white/10 space-y-2">
+          <div className="p-3 border-t border-black/10 space-y-2">
             <button
               onClick={handleLogout}
               className={cn(
-                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors",
+                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-black/60 hover:text-black hover:bg-black/5 transition-colors",
                 collapsed && "justify-center"
               )}
             >
@@ -490,7 +490,7 @@ export default function NobisCoreDashboardLayout({
 
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-black/40 hover:text-black hover:bg-black/5 transition-colors"
             >
               {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
               {!collapsed && <span className="text-sm">Recolher</span>}
@@ -505,14 +505,14 @@ export default function NobisCoreDashboardLayout({
         collapsed ? "ml-16" : "ml-64"
       )}>
         {/* Header */}
-        <header className="sticky top-0 z-30 h-16 bg-black/80 backdrop-blur-xl border-b border-white/10">
+        <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-xl border-b border-black/10">
           <div className="flex items-center justify-between h-full px-6">
             <div className="flex items-center gap-2">
-              <Link href="/nobiscore" className="text-white/40 text-sm hover:text-white transition-colors">
+              <Link href="/nobiscore" className="text-black/40 text-sm hover:text-black transition-colors">
                 NobisCore
               </Link>
-              <span className="text-white/20">/</span>
-              <span className="text-white text-sm font-medium">
+              <span className="text-black/20">/</span>
+              <span className="text-black text-sm font-medium">
                 {navigation.find(n => n.href === pathname || (n.href !== "/nobiscore/dashboard" && pathname?.startsWith(n.href)))?.name || "Dashboard"}
               </span>
             </div>
@@ -525,7 +525,7 @@ export default function NobisCoreDashboardLayout({
                 onConnect={() => handleConnectWallet("evm")}
               />
 
-              <div className="h-6 w-px bg-white/10" />
+              <div className="h-6 w-px bg-black/10" />
 
               <WalletBadge 
                 type="btc"
@@ -535,7 +535,7 @@ export default function NobisCoreDashboardLayout({
               />
 
               <Link href="/" target="_blank">
-                <Button variant="ghost" size="icon" className="text-white/40 hover:text-white">
+                <Button variant="ghost" size="icon" className="text-black/40 hover:text-black">
                   <ExternalLink className="w-4 h-4" />
                 </Button>
               </Link>
@@ -545,9 +545,9 @@ export default function NobisCoreDashboardLayout({
 
         {/* Warning if wallets not connected */}
         {(!evmAddress || !btcAddress) && (
-          <div className="mx-6 mt-4 p-4 rounded-lg bg-white/5 border border-white/10 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-white/60 shrink-0" />
-            <p className="text-sm text-white/60">
+          <div className="mx-6 mt-4 p-4 rounded-lg bg-black/5 border border-black/10 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-black/60 shrink-0" />
+            <p className="text-sm text-black/60">
               {!evmAddress && !btcAddress 
                 ? "Conecte suas carteiras Polygon e Bitcoin para usar todas as funcionalidades."
                 : !evmAddress 
@@ -557,7 +557,7 @@ export default function NobisCoreDashboardLayout({
             </p>
             <button 
               onClick={() => handleConnectWallet(evmAddress ? "btc" : "evm")}
-              className="ml-auto text-sm text-white hover:underline"
+              className="ml-auto text-sm text-black hover:underline"
             >
               Conectar
             </button>
@@ -572,12 +572,12 @@ export default function NobisCoreDashboardLayout({
 
       {/* Wallet Connection Modal */}
       <Dialog open={showWalletModal} onOpenChange={setShowWalletModal}>
-        <DialogContent className="bg-neutral-950 border-white/10 text-white max-w-md">
+        <DialogContent className="bg-white border-black/10 text-black max-w-md">
           <DialogHeader>
             <DialogTitle>
               Conectar Carteira {walletType === "evm" ? "Polygon (EVM)" : "Bitcoin"}
             </DialogTitle>
-            <DialogDescription className="text-white/60">
+            <DialogDescription className="text-black/60">
               {walletType === "evm" 
                 ? "Conecte sua carteira EVM para interagir com tokens na Polygon"
                 : "Conecte sua carteira Bitcoin para receber Ordinals Inscriptions"
@@ -592,29 +592,29 @@ export default function NobisCoreDashboardLayout({
                 onClick={() => handleWalletSelect(wallet.id)}
                 disabled={wallet.disabled || connecting === wallet.id}
                 className={cn(
-                  "w-full flex items-center gap-3 p-4 rounded-lg border border-white/10 transition-colors",
+                  "w-full flex items-center gap-3 p-4 rounded-lg border border-black/10 transition-colors",
                   wallet.disabled 
                     ? "opacity-50 cursor-not-allowed" 
-                    : "hover:bg-white/5 hover:border-white/20"
+                    : "hover:bg-black/5 hover:border-black/20"
                 )}
               >
-                <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center text-xl">
+                <div className="w-10 h-10 rounded-lg bg-black/10 flex items-center justify-center text-xl">
                   {wallet.icon}
                 </div>
                 <div className="flex-1 text-left">
                   <span className="font-medium">{wallet.name}</span>
                   {wallet.disabled && (
-                    <span className="text-xs text-white/40 block">Em breve</span>
+                    <span className="text-xs text-black/40 block">Em breve</span>
                   )}
                 </div>
                 {connecting === wallet.id && (
-                  <Loader2 className="w-5 h-5 animate-spin text-white/60" />
+                  <Loader2 className="w-5 h-5 animate-spin text-black/60" />
                 )}
               </button>
             ))}
           </div>
 
-          <p className="text-xs text-white/40 text-center mt-4">
+          <p className="text-xs text-black/40 text-center mt-4">
             {walletType === "evm" 
               ? "Não tem MetaMask? Baixe em metamask.io"
               : "Não tem uma carteira Bitcoin? Baixe Unisat ou Xverse"

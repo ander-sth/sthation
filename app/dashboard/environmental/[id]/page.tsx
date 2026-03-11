@@ -1,6 +1,6 @@
 "use client"
 
-import { use } from "react"
+import { use, useState } from "react"
 import Link from "next/link"
 import useSWR from "swr"
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,10 @@ import {
   Droplets,
   Scale,
   Zap,
+  Pencil,
+  Lock,
+  DollarSign,
+  MessageSquare,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
@@ -43,7 +47,9 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json())
 // Status config
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
   DRAFT: { label: "Rascunho", color: "bg-gray-500/10 text-gray-600 border-gray-300", icon: Clock },
+  EM_ANDAMENTO: { label: "Em Andamento", color: "bg-blue-500/10 text-blue-600 border-blue-300", icon: Activity },
   COLLECTING: { label: "Coletando Dados", color: "bg-blue-500/10 text-blue-600 border-blue-300", icon: Activity },
+  CONCLUIDO: { label: "Concluido", color: "bg-emerald-500/10 text-emerald-600 border-emerald-300", icon: CheckCircle2 },
   SUBMITTED: { label: "Aguardando Certificacao", color: "bg-amber-500/10 text-amber-600 border-amber-300", icon: AlertCircle },
   VALIDATED: { label: "Validado", color: "bg-emerald-500/10 text-emerald-600 border-emerald-300", icon: CheckCircle2 },
   CERTIFIED: { label: "Certificado", color: "bg-emerald-500/10 text-emerald-600 border-emerald-300", icon: CheckCircle2 },
@@ -63,9 +69,201 @@ const EVIDENCE_ICONS: Record<string, any> = {
 export default function EnvironmentalProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { user } = useAuth()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState("overview")
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
 
   // Buscar dados do projeto
-  const { data, isLoading, error } = useSWR(`/api/iac/${id}`, fetcher)
+  const { data, isLoading, error, mutate } = useSWR(`/api/iac/${id}`, fetcher)
+
+  // Buscar propostas de certificação para este projeto
+  const { data: proposalsData, mutate: mutateProposals } = useSWR(
+    data?.iac ? `/api/certification/proposals?iacId=${id}` : null,
+    fetcher
+  )
+  const proposals = proposalsData?.proposals || []
+  const [acceptingProposal, setAcceptingProposal] = useState<string | null>(null)
+
+  // Função para gerar PDF do certificado
+  const handleGeneratePdf = async () => {
+    setIsGeneratingPdf(true)
+    try {
+      // Importar jsPDF dinamicamente
+      const { default: jsPDF } = await import("jspdf")
+      
+      const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.getWidth()
+      
+      // Header
+      doc.setFillColor(10, 47, 47) // #0a2f2f
+      doc.rect(0, 0, pageWidth, 40, "F")
+      
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(24)
+      doc.setFont("helvetica", "bold")
+      doc.text("CERTIFICADO DE IMPACTO AMBIENTAL", pageWidth / 2, 20, { align: "center" })
+      
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "normal")
+      doc.text("STHation - Plataforma de Certificacao Ambiental", pageWidth / 2, 30, { align: "center" })
+      
+      // Reset text color
+      doc.setTextColor(0, 0, 0)
+      
+      // Project Info
+      doc.setFontSize(16)
+      doc.setFont("helvetica", "bold")
+      doc.text("Dados do Projeto", 20, 55)
+      
+      doc.setFontSize(11)
+      doc.setFont("helvetica", "normal")
+      
+      let yPos = 65
+      const lineHeight = 7
+      
+      doc.text(`Titulo: ${project.title}`, 20, yPos)
+      yPos += lineHeight
+      doc.text(`Categoria: ${project.category || "Ambiental"}`, 20, yPos)
+      yPos += lineHeight
+      doc.text(`Localizacao: ${project.location_name || ""}, ${project.location_state || ""}`, 20, yPos)
+      yPos += lineHeight
+      doc.text(`Data de Criacao: ${new Date(project.created_at).toLocaleDateString("pt-BR")}`, 20, yPos)
+      yPos += lineHeight * 2
+      
+      // Metrics
+      doc.setFontSize(16)
+      doc.setFont("helvetica", "bold")
+      doc.text("Metricas de Impacto", 20, yPos)
+      yPos += lineHeight + 3
+      
+      doc.setFontSize(11)
+      doc.setFont("helvetica", "normal")
+      doc.text(`Residuos Processados: ${(project.waste_processed || 0).toLocaleString("pt-BR")} kg`, 20, yPos)
+      yPos += lineHeight
+      doc.text(`CO2 Equivalente Evitado: ${project.co2_equivalent || 0} tCO2e/ano`, 20, yPos)
+      yPos += lineHeight
+      doc.text(`Energia Gerada: ${project.energy_generated || 0} kWh`, 20, yPos)
+      yPos += lineHeight
+      doc.text(`Sensores IoT: ${project.sensors_count || 0} dispositivos`, 20, yPos)
+      yPos += lineHeight * 2
+      
+      // Certification Info
+      if (project.status === "CERTIFIED" || project.polygon_tx_hash) {
+        doc.setFontSize(16)
+        doc.setFont("helvetica", "bold")
+        doc.text("Dados da Certificacao", 20, yPos)
+        yPos += lineHeight + 3
+        
+        doc.setFontSize(11)
+        doc.setFont("helvetica", "normal")
+        doc.text(`Status: Certificado`, 20, yPos)
+        yPos += lineHeight
+        doc.text(`Score de Certificacao: ${project.certification_score || "-"}/100`, 20, yPos)
+        yPos += lineHeight
+        if (project.certified_at) {
+          doc.text(`Data de Certificacao: ${new Date(project.certified_at).toLocaleDateString("pt-BR")}`, 20, yPos)
+          yPos += lineHeight
+        }
+        yPos += lineHeight
+        
+        // Hash Blockchain
+        doc.setFontSize(16)
+        doc.setFont("helvetica", "bold")
+        doc.text("Registro Blockchain", 20, yPos)
+        yPos += lineHeight + 3
+        
+        doc.setFontSize(10)
+        doc.setFont("helvetica", "normal")
+        if (project.polygon_tx_hash) {
+          doc.text("Hash da Transacao (Polygon):", 20, yPos)
+          yPos += lineHeight
+          doc.setFont("courier", "normal")
+          doc.text(project.polygon_tx_hash, 20, yPos)
+          yPos += lineHeight * 2
+        }
+        
+        // QR Code placeholder text
+        doc.setFont("helvetica", "italic")
+        doc.setFontSize(9)
+        doc.text("Este certificado pode ser verificado na blockchain Polygon.", 20, yPos)
+        yPos += lineHeight
+        doc.text(`ID do Projeto: ${project.id}`, 20, yPos)
+      }
+      
+      // Footer
+      doc.setFillColor(240, 240, 240)
+      doc.rect(0, 270, pageWidth, 30, "F")
+      
+      doc.setTextColor(100, 100, 100)
+      doc.setFontSize(8)
+      doc.text("Documento gerado automaticamente pela plataforma STHation", pageWidth / 2, 280, { align: "center" })
+      doc.text(`Data de emissao: ${new Date().toLocaleDateString("pt-BR")} as ${new Date().toLocaleTimeString("pt-BR")}`, pageWidth / 2, 286, { align: "center" })
+      
+      // Save
+      doc.save(`certificado-${project.title.toLowerCase().replace(/\s+/g, "-")}.pdf`)
+      
+    } catch (err) {
+      console.error("Erro ao gerar PDF:", err)
+      alert("Erro ao gerar PDF. Tente novamente.")
+    } finally {
+      setIsGeneratingPdf(false)
+    }
+  }
+
+  // Função para aceitar proposta de certificação
+  const handleAcceptProposal = async (proposalId: string) => {
+    if (!confirm("Ao aceitar esta proposta, as outras serao recusadas automaticamente. Deseja continuar?")) {
+      return
+    }
+    
+    setAcceptingProposal(proposalId)
+    try {
+      const res = await fetch(`/api/certification/proposals/${proposalId}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+      
+      if (res.ok) {
+        alert("Proposta aceita! O certificador sera notificado para iniciar a analise.")
+        mutate()
+        mutateProposals()
+      } else {
+        const data = await res.json()
+        alert(data.error || "Erro ao aceitar proposta")
+      }
+    } catch (err) {
+      alert("Erro ao aceitar proposta")
+    } finally {
+      setAcceptingProposal(null)
+    }
+  }
+
+  // Função para solicitar certificação
+  const handleRequestCertification = async () => {
+    if (!confirm("Ao solicitar certificacao, o projeto sera bloqueado para edicao. Deseja continuar?")) {
+      return
+    }
+    
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/iac/${id}/submit-certification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+      
+      if (res.ok) {
+        alert("Certificacao solicitada com sucesso! O projeto agora aguarda analise de um certificador.")
+        mutate() // Recarregar dados
+      } else {
+        const data = await res.json()
+        alert(data.error || "Erro ao solicitar certificacao")
+      }
+    } catch (err) {
+      alert("Erro ao solicitar certificacao")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -104,19 +302,21 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
   const statusCfg = STATUS_CONFIG[project.status] || STATUS_CONFIG.DRAFT
   const StatusIcon = statusCfg.icon
 
-  // Calcular metricas
+  // Calcular metricas usando campos corretos do banco de dados
   const metrics = {
-    inputKg: project.metrics?.inputKg || project.input_kg || 0,
-    outputKg: project.metrics?.outputKg || project.output_kg || 0,
-    co2eAvoided: project.metrics?.co2eAvoided || project.vca_score || 0,
-    cyclesCompleted: project.metrics?.cyclesCompleted || 0,
-    efficiency: project.metrics?.outputKg && project.metrics?.inputKg 
-      ? ((project.metrics.outputKg / project.metrics.inputKg) * 100).toFixed(1)
-      : 0,
+    inputKg: project.waste_processed || project.input_kg || 0,
+    outputKg: project.output_kg || 0,
+    co2eAvoided: project.co2_equivalent || project.vca_score || 0,
+    energyGenerated: project.energy_generated || 0,
+    sensorsCount: project.sensors_count || 0,
   }
 
-  const canSubmitForCertification = project.status === "COLLECTING" || project.status === "DRAFT"
+  // Pode solicitar certificação se estiver concluído ou em andamento (não pode se já enviou ou está certificado)
+  const canSubmitForCertification = ["DRAFT", "COLLECTING", "EM_ANDAMENTO", "CONCLUIDO"].includes(project.status)
+  // Pode editar se não estiver aguardando certificação, certificado ou na blockchain
+  const canEdit = !["SUBMITTED", "VALIDATED", "CERTIFIED", "INSCRIBED", "MINTED"].includes(project.status)
   const isBlockchainRegistered = project.status === "INSCRIBED" || project.status === "MINTED" || project.polygon_tx_hash
+  const isAwaitingCertification = project.status === "SUBMITTED"
 
   return (
     <div className="space-y-6">
@@ -152,14 +352,44 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              Exportar PDF
+            <Button 
+              variant="outline" 
+              onClick={handleGeneratePdf}
+              disabled={isGeneratingPdf}
+            >
+              {isGeneratingPdf ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              {isGeneratingPdf ? "Gerando..." : "Exportar PDF"}
             </Button>
+            {canEdit && (
+              <Button variant="outline" asChild>
+                <Link href={`/dashboard/environmental/${id}/edit`}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Editar Projeto
+                </Link>
+              </Button>
+            )}
             {canSubmitForCertification && (
-              <Button className="bg-[#0a2f2f] hover:bg-[#0a2f2f]/90 text-white">
-                <Send className="mr-2 h-4 w-4" />
+              <Button 
+                className="bg-[#0a2f2f] hover:bg-[#0a2f2f]/90 text-white"
+                onClick={handleRequestCertification}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
                 Solicitar Certificacao
+              </Button>
+            )}
+            {isAwaitingCertification && (
+              <Button variant="outline" disabled className="gap-2">
+                <Lock className="h-4 w-4" />
+                Aguardando Certificacao
               </Button>
             )}
           </div>
@@ -215,7 +445,7 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{project.iot_sensors || 0}</div>
+            <div className="text-3xl font-bold">{metrics.sensorsCount}</div>
             <p className="text-xs text-foreground/60">dispositivos conectados</p>
           </CardContent>
         </Card>
@@ -259,16 +489,48 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Visao Geral</TabsTrigger>
-          <TabsTrigger value="evidences">Evidencias ({evidences.length})</TabsTrigger>
-          <TabsTrigger value="certification">Certificacao</TabsTrigger>
-          <TabsTrigger value="timeline">Historico</TabsTrigger>
-        </TabsList>
+<TabsTrigger value="overview">Visao Geral</TabsTrigger>
+                <TabsTrigger value="evidences">Evidencias ({evidences.length})</TabsTrigger>
+                <TabsTrigger value="certification" className={proposals.length > 0 ? "relative" : ""}>
+                  Certificacao
+                  {proposals.filter((p: any) => p.status === "PENDING").length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                      {proposals.filter((p: any) => p.status === "PENDING").length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="timeline">Historico</TabsTrigger>
+              </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
+          {/* Alerta de Propostas Pendentes */}
+          {proposals.filter((p: any) => p.status === "PENDING").length > 0 && (
+            <div className="p-4 rounded-lg bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-400 animate-pulse">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="h-6 w-6 text-amber-600" />
+                  <div>
+                    <p className="font-semibold text-amber-800 dark:text-amber-300">
+                      Voce tem {proposals.filter((p: any) => p.status === "PENDING").length} proposta(s) de certificacao!
+                    </p>
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      Clique na aba "Certificacao" para ver os valores e aceitar uma proposta.
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  onClick={() => setActiveTab("certification")}
+                >
+                  Ver Propostas
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
@@ -326,58 +588,7 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
             </Card>
           </div>
 
-          {/* Impact Metrics */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Metricas de Impacto
-              </CardTitle>
-              <CardDescription>
-                Dados coletados durante o periodo de medicao do projeto
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-foreground/60">
-                    <Scale className="h-4 w-4" />
-                    Residuos Processados
-                  </div>
-                  <p className="text-2xl font-bold">{metrics.inputKg.toLocaleString("pt-BR")} kg</p>
-                  <Progress value={100} className="h-2" />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-foreground/60">
-                    <Leaf className="h-4 w-4" />
-                    CO2 Equivalente Evitado
-                  </div>
-                  <p className="text-2xl font-bold text-emerald-600">{metrics.co2eAvoided} tCO2e</p>
-                  <p className="text-xs text-foreground/60">Fator de emissao: 1.5 kg CO2e/kg</p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-foreground/60">
-                    <Thermometer className="h-4 w-4" />
-                    Temperatura Media
-                  </div>
-                  <p className="text-2xl font-bold">55-65°C</p>
-                  <p className="text-xs text-foreground/60">Faixa ideal para compostagem</p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-foreground/60">
-                    <Droplets className="h-4 w-4" />
-                    Umidade Media
-                  </div>
-                  <p className="text-2xl font-bold">50-60%</p>
-                  <p className="text-xs text-foreground/60">Faixa otima mantida</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          </TabsContent>
 
         {/* Evidences Tab */}
         <TabsContent value="evidences" className="space-y-4">
@@ -481,6 +692,112 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
                   {isBlockchainRegistered && <CheckCircle2 className="h-5 w-5 text-emerald-600" />}
                 </div>
               </div>
+
+              {/* Propostas de Certificação */}
+              {(project.status === "SUBMITTED" || project.status === "VALIDATED" || project.status === "CERTIFIED") && proposals.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <DollarSign className="h-5 w-5" />
+                      Propostas de Certificacao Recebidas ({proposals.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {proposals.map((proposal: any) => (
+                        <div 
+                          key={proposal.id} 
+                          className={`p-4 rounded-lg border ${
+                            proposal.status === "ACCEPTED" 
+                              ? "bg-emerald-50 border-emerald-300 dark:bg-emerald-950/20" 
+                              : proposal.status === "REJECTED"
+                              ? "bg-red-50 border-red-300 dark:bg-red-950/20 opacity-60"
+                              : "bg-muted/50"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-foreground/60" />
+                                <span className="font-medium">{proposal.certifier_name}</span>
+                                {proposal.certifier_institution_name && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {proposal.certifier_institution_name}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-2xl font-bold text-emerald-600">
+                                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(proposal.proposed_value)}
+                              </p>
+                              {proposal.message && (
+                                <div className="flex items-start gap-2 mt-2 text-sm text-foreground/70">
+                                  <MessageSquare className="h-4 w-4 mt-0.5" />
+                                  <p>{proposal.message}</p>
+                                </div>
+                              )}
+                              <p className="text-xs text-foreground/50">
+                                Enviado em {new Date(proposal.created_at).toLocaleDateString("pt-BR")}
+                              </p>
+                            </div>
+                            <div>
+                              {proposal.status === "PENDING" && (
+                                <Button
+                                  size="sm"
+                                  className="bg-emerald-600 hover:bg-emerald-700"
+                                  onClick={() => handleAcceptProposal(proposal.id)}
+                                  disabled={acceptingProposal === proposal.id}
+                                >
+                                  {acceptingProposal === proposal.id ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                                  )}
+                                  Aceitar
+                                </Button>
+                              )}
+                              {proposal.status === "ACCEPTED" && (
+                                <Badge className="bg-emerald-600">Aceita</Badge>
+                              )}
+                              {proposal.status === "REJECTED" && (
+                                <Badge variant="outline" className="text-red-600">Recusada</Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Proposta Aceita - Em Certificação */}
+              {project.status === "VALIDATED" && proposals.some((p: any) => p.status === "ACCEPTED") && (
+                <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border-2 border-emerald-400">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                    <div>
+                      <p className="font-semibold text-emerald-800 dark:text-emerald-300">Proposta aceita! Projeto em certificacao</p>
+                      <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                        O certificador foi notificado e ira analisar seu projeto para emitir o certificado e hash blockchain.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Aguardando Propostas */}
+              {project.status === "SUBMITTED" && proposals.length === 0 && (
+                <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200">
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-5 w-5 text-amber-600" />
+                    <div>
+                      <p className="font-medium text-amber-800 dark:text-amber-400">Aguardando propostas de certificadores</p>
+                      <p className="text-sm text-amber-700 dark:text-amber-500">
+                        Certificadores estao analisando seu projeto. Voce sera notificado quando receberem propostas.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Technical Review Details */}
               {technicalReview && (
