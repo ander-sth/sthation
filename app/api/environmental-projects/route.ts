@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Inserir no banco
+    // Inserir no banco - usando apenas colunas que existem na tabela
     const result = await sql`
       INSERT INTO impact_action_cards (
         title,
@@ -123,23 +123,15 @@ export async function POST(request: Request) {
         location_name,
         location_state,
         coordinates,
-        start_date,
-        end_date,
-        carbon_credits,
         measurement_unit,
         energy_generated,
         waste_processed,
         area_size,
-        methodology,
         certification_standard,
         existing_certifications,
         sensors_count,
         sensor_types,
-        institution_id,
-        funding_goal,
-        current_funding,
-        target_beneficiaries,
-        current_beneficiaries
+        institution_id
       ) VALUES (
         ${title},
         ${description},
@@ -151,23 +143,15 @@ export async function POST(request: Request) {
         ${locationName},
         ${locationState},
         ${coordinates || null},
-        ${startDate || null},
-        ${endDate || null},
-        ${parseFloat(estimatedCO2) || 0},
         ${measurementUnit || 'tCO2e'},
         ${parseFloat(energyGenerated) || 0},
         ${parseFloat(wasteProcessed) || 0},
         ${parseFloat(areaSize) || 0},
-        ${methodology || null},
         ${certificationStandard || null},
         ${existingCertifications || null},
         ${parseInt(sensorsCount) || 0},
         ${sensorTypes || null},
-        ${institutionId},
-        0,
-        0,
-        0,
-        0
+        ${institutionId}
       )
       RETURNING *
     `
