@@ -575,10 +575,10 @@ function MyEnvironmentalProjects() {
             <Leaf className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="font-medium mb-1">Nenhum projeto cadastrado</h3>
             <p className="text-sm text-muted-foreground mb-4">Cadastre seu primeiro projeto ambiental</p>
-            <Button asChild>
-              <Link href="/dashboard/iac/new">
+            <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
+              <Link href="/dashboard/environmental/new">
                 <Plus className="mr-2 h-4 w-4" />
-                Criar Projeto
+                Criar Projeto Ambiental
               </Link>
             </Button>
           </div>
