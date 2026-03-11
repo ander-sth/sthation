@@ -29,6 +29,10 @@ import {
   Wind,
   Recycle,
   TreePine,
+  Upload,
+  X,
+  Image as ImageIcon,
+  File,
 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
@@ -114,6 +118,8 @@ export default function NewEnvironmentalProjectPage() {
   const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [step, setStep] = useState(1)
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([])
+  const [uploadingFiles, setUploadingFiles] = useState(false)
   const [formData, setFormData] = useState({
     // Informacoes basicas
     title: "",
@@ -205,6 +211,30 @@ export default function NewEnvironmentalProjectPage() {
 
   const selectedCategory = ENVIRONMENTAL_CATEGORIES.find((c) => c.code === formData.category)
   const SelectedCategoryIcon = selectedCategory?.icon || Leaf
+
+  // Funções para gerenciar arquivos de evidência
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files) {
+      const newFiles = Array.from(files)
+      setEvidenceFiles(prev => [...prev, ...newFiles])
+    }
+  }
+
+  const removeFile = (index: number) => {
+    setEvidenceFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + " B"
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB"
+  }
+
+  const getFileIcon = (file: File) => {
+    if (file.type.startsWith("image/")) return <ImageIcon className="h-4 w-4" />
+    return <File className="h-4 w-4" />
+  }
 
   return (
     <div className="space-y-6">
@@ -655,20 +685,77 @@ export default function NewEnvironmentalProjectPage() {
                       />
                     </div>
 
-                    <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 p-4">
-                      <h4 className="font-medium text-amber-800 dark:text-amber-400 flex items-center gap-2 mb-2">
+                    {/* Upload de Evidências */}
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Upload className="h-4 w-4" />
+                        Evidencias e Documentos
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Anexe fotos, relatorios e documentos que comprovam o impacto ambiental do projeto
+                      </p>
+                      
+                      {/* Área de Upload */}
+                      <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-emerald-500/50 transition-colors">
+                        <input
+                          type="file"
+                          id="evidence-upload"
+                          multiple
+                          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                        <label htmlFor="evidence-upload" className="cursor-pointer">
+                          <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+                          <p className="font-medium text-foreground">Clique para selecionar arquivos</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Fotos, PDFs, planilhas (max 10MB cada)
+                          </p>
+                        </label>
+                      </div>
+
+                      {/* Lista de Arquivos Selecionados */}
+                      {evidenceFiles.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">{evidenceFiles.length} arquivo(s) selecionado(s)</p>
+                          <div className="max-h-40 overflow-y-auto space-y-2">
+                            {evidenceFiles.map((file, index) => (
+                              <div key={index} className="flex items-center justify-between bg-muted/50 rounded-lg p-2 text-sm">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {getFileIcon(file)}
+                                  <span className="truncate">{file.name}</span>
+                                  <span className="text-muted-foreground text-xs">({formatFileSize(file.size)})</span>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFile(index)}
+                                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 p-4">
+                      <h4 className="font-medium text-emerald-800 dark:text-emerald-400 flex items-center gap-2 mb-2">
                         <Info className="h-4 w-4" />
-                        Documentos Necessarios
+                        Documentos Recomendados para Certificacao
                       </h4>
-                      <ul className="text-sm text-amber-700 dark:text-amber-400 space-y-1 list-disc list-inside">
+                      <ul className="text-sm text-emerald-700 dark:text-emerald-400 space-y-1 list-disc list-inside">
+                        <li>Fotos do projeto em operacao</li>
                         <li>Relatorios tecnicos de medicao</li>
-                        <li>Fotos e videos do projeto</li>
-                        <li>Dados de sensores ou planilhas de medicao</li>
+                        <li>Dados de sensores ou planilhas de monitoramento</li>
                         <li>Licencas ambientais (se aplicavel)</li>
-                        <li>Laudos de auditoria (se houver)</li>
+                        <li>Laudos de auditoria externa (se houver)</li>
                       </ul>
-                      <p className="text-xs text-amber-600 mt-2">
-                        Voce podera adicionar documentos apos criar o projeto
+                      <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-2">
+                        Estes arquivos serao usados para gerar o relatorio PDF e o hash de certificacao na blockchain
                       </p>
                     </div>
                   </CardContent>

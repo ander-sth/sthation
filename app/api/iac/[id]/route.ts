@@ -27,14 +27,11 @@ export async function GET(
       WHERE iac.id = ${id}
     `
 
-    console.log("[v0] API IAC - Buscando projeto ID:", id, "Encontrado:", iacs.length)
-    
     if (iacs.length === 0) {
       return NextResponse.json({ error: "IAC not found" }, { status: 404 })
     }
 
     const iac = iacs[0]
-    console.log("[v0] API IAC - Projeto encontrado:", iac.title, "Status:", iac.status)
 
     // Buscar evidencias (tabela pode nao existir)
     let evidences: any[] = []
