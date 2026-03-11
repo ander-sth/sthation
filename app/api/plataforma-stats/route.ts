@@ -45,10 +45,17 @@ export async function GET() {
     const institutionsTotal = await sql`SELECT COUNT(*) as total FROM institutions`
     const institutionsVerified = await sql`SELECT COUNT(*) as total FROM institutions WHERE is_verified = true`
 
-    // Projetos de funding
-    const fundingTotal = await sql`SELECT COUNT(*) as total FROM funding_projects`
-    const fundingActive = await sql`SELECT COUNT(*) as total FROM funding_projects WHERE status = 'FUNDING'`
-    const fundingCompleted = await sql`SELECT COUNT(*) as total FROM funding_projects WHERE status = 'COMPLETED'`
+    // Projetos de funding (tabela pode nao existir)
+    let fundingTotal = [{ total: 0 }]
+    let fundingActive = [{ total: 0 }]
+    let fundingCompleted = [{ total: 0 }]
+    try {
+      fundingTotal = await sql`SELECT COUNT(*) as total FROM funding_projects`
+      fundingActive = await sql`SELECT COUNT(*) as total FROM funding_projects WHERE status = 'FUNDING'`
+      fundingCompleted = await sql`SELECT COUNT(*) as total FROM funding_projects WHERE status = 'COMPLETED'`
+    } catch (e) {
+      // Tabela funding_projects pode nao existir
+    }
 
     // IACs (Impact Action Cards)
     const iacTotal = await sql`SELECT COUNT(*) as total FROM impact_action_cards`
@@ -58,20 +65,35 @@ export async function GET() {
     // Beneficiarios
     const beneficiarios = await sql`SELECT COALESCE(SUM(estimated_beneficiaries), 0) as total FROM impact_action_cards`
 
-    // Doacoes
-    const doacoesStats = await sql`
-      SELECT 
-        COUNT(*) as total_doacoes, 
-        COALESCE(SUM(amount), 0) as total_arrecadado
-      FROM donations
-      WHERE payment_status = 'CONFIRMED' OR payment_status IS NULL
-    `
+    // Doacoes (tabela pode nao existir)
+    let doacoesStats = [{ total_doacoes: 0, total_arrecadado: 0 }]
+    try {
+      doacoesStats = await sql`
+        SELECT 
+          COUNT(*) as total_doacoes, 
+          COALESCE(SUM(amount), 0) as total_arrecadado
+        FROM donations
+        WHERE payment_status = 'CONFIRMED' OR payment_status IS NULL
+      `
+    } catch (e) {
+      // Tabela donations pode nao existir
+    }
 
     // NOBIS registrados (com inscription_id)
-    const nobisRegistered = await sql`SELECT COUNT(*) as total FROM impact_action_cards WHERE inscription_id IS NOT NULL`
+    let nobisRegistered = [{ total: 0 }]
+    try {
+      nobisRegistered = await sql`SELECT COUNT(*) as total FROM impact_action_cards WHERE inscription_id IS NOT NULL`
+    } catch (e) {
+      // Coluna inscription_id pode nao existir
+    }
 
-    // Validacoes VCA
-    const validacoes = await sql`SELECT COUNT(*) as total FROM vca_votes`
+    // Validacoes VCA (tabela pode nao existir)
+    let validacoes = [{ total: 0 }]
+    try {
+      validacoes = await sql`SELECT COUNT(*) as total FROM vca_votes`
+    } catch (e) {
+      // Tabela vca_votes pode nao existir
+    }
 
     return NextResponse.json({
       stats: {
