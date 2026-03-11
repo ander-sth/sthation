@@ -137,7 +137,7 @@ export async function POST(request: Request) {
         ${description},
         'AMBIENTAL',
         ${category},
-        'DRAFT',
+        ${projectStatus === 'CONCLUIDO' ? 'CONCLUIDO' : 'EM_ANDAMENTO'},
         ${projectStatus || 'EM_ANDAMENTO'},
         ${dataCollectionType || 'MANUAL'},
         ${locationName},

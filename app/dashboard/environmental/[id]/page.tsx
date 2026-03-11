@@ -1,6 +1,6 @@
 "use client"
 
-import { use } from "react"
+import { use, useState } from "react"
 import Link from "next/link"
 import useSWR from "swr"
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,8 @@ import {
   Droplets,
   Scale,
   Zap,
+  Pencil,
+  Lock,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
@@ -43,7 +45,9 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json())
 // Status config
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
   DRAFT: { label: "Rascunho", color: "bg-gray-500/10 text-gray-600 border-gray-300", icon: Clock },
+  EM_ANDAMENTO: { label: "Em Andamento", color: "bg-blue-500/10 text-blue-600 border-blue-300", icon: Activity },
   COLLECTING: { label: "Coletando Dados", color: "bg-blue-500/10 text-blue-600 border-blue-300", icon: Activity },
+  CONCLUIDO: { label: "Concluido", color: "bg-emerald-500/10 text-emerald-600 border-emerald-300", icon: CheckCircle2 },
   SUBMITTED: { label: "Aguardando Certificacao", color: "bg-amber-500/10 text-amber-600 border-amber-300", icon: AlertCircle },
   VALIDATED: { label: "Validado", color: "bg-emerald-500/10 text-emerald-600 border-emerald-300", icon: CheckCircle2 },
   CERTIFIED: { label: "Certificado", color: "bg-emerald-500/10 text-emerald-600 border-emerald-300", icon: CheckCircle2 },
@@ -63,9 +67,37 @@ const EVIDENCE_ICONS: Record<string, any> = {
 export default function EnvironmentalProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { user } = useAuth()
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Buscar dados do projeto
-  const { data, isLoading, error } = useSWR(`/api/iac/${id}`, fetcher)
+  const { data, isLoading, error, mutate } = useSWR(`/api/iac/${id}`, fetcher)
+
+  // Função para solicitar certificação
+  const handleRequestCertification = async () => {
+    if (!confirm("Ao solicitar certificacao, o projeto sera bloqueado para edicao. Deseja continuar?")) {
+      return
+    }
+    
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/iac/${id}/submit-certification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+      
+      if (res.ok) {
+        alert("Certificacao solicitada com sucesso! O projeto agora aguarda analise de um certificador.")
+        mutate() // Recarregar dados
+      } else {
+        const data = await res.json()
+        alert(data.error || "Erro ao solicitar certificacao")
+      }
+    } catch (err) {
+      alert("Erro ao solicitar certificacao")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -115,8 +147,12 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
       : 0,
   }
 
-  const canSubmitForCertification = project.status === "COLLECTING" || project.status === "DRAFT"
+  // Pode solicitar certificação se estiver concluído ou em andamento (não pode se já enviou ou está certificado)
+  const canSubmitForCertification = ["DRAFT", "COLLECTING", "EM_ANDAMENTO", "CONCLUIDO"].includes(project.status)
+  // Pode editar se não estiver aguardando certificação, certificado ou na blockchain
+  const canEdit = !["SUBMITTED", "VALIDATED", "CERTIFIED", "INSCRIBED", "MINTED"].includes(project.status)
   const isBlockchainRegistered = project.status === "INSCRIBED" || project.status === "MINTED" || project.polygon_tx_hash
+  const isAwaitingCertification = project.status === "SUBMITTED"
 
   return (
     <div className="space-y-6">
@@ -156,10 +192,32 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
               <Download className="mr-2 h-4 w-4" />
               Exportar PDF
             </Button>
+            {canEdit && (
+              <Button variant="outline" asChild>
+                <Link href={`/dashboard/environmental/${id}/edit`}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Editar Projeto
+                </Link>
+              </Button>
+            )}
             {canSubmitForCertification && (
-              <Button className="bg-[#0a2f2f] hover:bg-[#0a2f2f]/90 text-white">
-                <Send className="mr-2 h-4 w-4" />
+              <Button 
+                className="bg-[#0a2f2f] hover:bg-[#0a2f2f]/90 text-white"
+                onClick={handleRequestCertification}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
                 Solicitar Certificacao
+              </Button>
+            )}
+            {isAwaitingCertification && (
+              <Button variant="outline" disabled className="gap-2">
+                <Lock className="h-4 w-4" />
+                Aguardando Certificacao
               </Button>
             )}
           </div>
