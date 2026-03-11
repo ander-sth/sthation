@@ -87,7 +87,7 @@ export default function DashboardPage() {
 
         {/* Empresa Ambiental - projetos ambientais com dados IoT e certificacao */}
         {user.role === UserRole.EMPRESA_AMBIENTAL && (
-          <EmpresaAmbientalStats userId={user.id} />
+          <EmpresaAmbientalStats userId={user.id} institutionId={user.institutionId} />
         )}
 
         {/* Checker */}
@@ -660,15 +660,20 @@ function IoTSensorOverview() {
 }
 
 // Stats para Empresa Ambiental - busca dados reais do banco
-function EmpresaAmbientalStats({ userId }: { userId: string }) {
-  const { data, isLoading } = useApiData<any>(`/api/iac?type=AMBIENTAL&owner_id=${userId}`, {})
+function EmpresaAmbientalStats({ userId, institutionId }: { userId: string; institutionId?: string }) {
+  const { data, isLoading } = useApiData<any>(
+    institutionId ? `/api/iac?type=AMBIENTAL&institutionId=${institutionId}` : null,
+    {}
+  )
   const projects = data?.projects || []
   
   const totalProjects = projects.length
-  const collectingProjects = projects.filter((p: any) => p.status === "COLLECTING" || p.status === "SUBMITTED").length
-  const certifiedProjects = projects.filter((p: any) => p.status === "CERTIFIED" || p.status === "INSCRIBED").length
-  const inscribedProjects = projects.filter((p: any) => p.status === "INSCRIBED").length
-  const totalCO2 = projects.reduce((sum: number, p: any) => sum + (p.carbon_credits || p.co2_avoided || 0), 0)
+  const activeProjects = projects.filter((p: any) => 
+    ["DRAFT", "EM_ANDAMENTO", "CONCLUIDO", "COLLECTING", "SUBMITTED", "VALIDATED"].includes(p.status)
+  ).length
+  const certifiedProjects = projects.filter((p: any) => p.status === "CERTIFIED" || p.status === "INSCRIBED" || p.status === "MINTED").length
+  const awaitingCertification = projects.filter((p: any) => p.status === "SUBMITTED" || p.status === "VALIDATED").length
+  const totalCO2 = projects.reduce((sum: number, p: any) => sum + (p.co2_equivalent || p.carbon_credits || p.co2_avoided || 0), 0)
   const totalSensors = projects.reduce((sum: number, p: any) => sum + (p.sensors_count || 0), 0)
 
   if (isLoading) {
@@ -684,13 +689,13 @@ function EmpresaAmbientalStats({ userId }: { userId: string }) {
 
   return (
     <>
-      <StatCard 
-        title="Projetos Ativos" 
-        value={totalProjects.toString()} 
-        description={`${collectingProjects} coletando dados IoT`} 
-        icon={FileCheck} 
-        highlight 
-      />
+<StatCard
+  title="Projetos"
+  value={totalProjects.toString()}
+  description={`${activeProjects} ativos, ${awaitingCertification} aguardando certificacao`}
+  icon={FileCheck}
+  highlight
+  />
       <StatCard 
         title="Sensores IoT" 
         value={totalSensors.toString()} 
@@ -704,12 +709,12 @@ function EmpresaAmbientalStats({ userId }: { userId: string }) {
         icon={TrendingUp} 
         trend={totalCO2 > 0 ? "up" : undefined} 
       />
-      <StatCard 
-        title="Certificados" 
-        value={certifiedProjects.toString()} 
-        description={`${inscribedProjects} inscrito na blockchain`} 
-        icon={Award} 
-      />
+<StatCard
+  title="Certificados"
+  value={certifiedProjects.toString()}
+  description={certifiedProjects > 0 ? "com hash na blockchain" : "aguardando certificacao"}
+  icon={Award}
+  />
     </>
   )
 }

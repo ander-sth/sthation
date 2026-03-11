@@ -299,10 +299,18 @@ export default function EnvironmentalProjectsPage() {
                       <div className="mb-2 flex flex-wrap items-center gap-2">
                         <CategoryIcon className="h-5 w-5 text-[#0a2f2f]" />
                         <h3 className="font-semibold">{project.title}</h3>
-                        <Badge className={statusCfg.color}>{statusCfg.label}</Badge>
-                        {hasAcceptedProposal && (
-                          <Badge className="bg-emerald-600 text-white">
+                        {/* Mostra status do projeto OU badge de certificação em andamento */}
+                        {!hasAcceptedProposal && (
+                          <Badge className={statusCfg.color}>{statusCfg.label}</Badge>
+                        )}
+                        {hasAcceptedProposal && project.status !== "CERTIFIED" && (
+                          <Badge className="bg-amber-500 text-white">
                             Em Certificacao
+                          </Badge>
+                        )}
+                        {project.status === "CERTIFIED" && (
+                          <Badge className="bg-emerald-600 text-white">
+                            Certificado
                           </Badge>
                         )}
                         {hasProposals && !hasAcceptedProposal && (
