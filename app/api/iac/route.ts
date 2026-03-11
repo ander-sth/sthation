@@ -53,6 +53,10 @@ export async function GET(request: NextRequest) {
         iac.minted_at,
         iac.created_at,
         iac.updated_at,
+        iac.sensors_count,
+        iac.co2_equivalent,
+        iac.certification_score,
+        iac.certified_at,
         i.id as inst_id,
         i.name as inst_name,
         i.cnpj as inst_cnpj,
@@ -99,6 +103,10 @@ export async function GET(request: NextRequest) {
       createdAt: row.created_at,
       created_at: row.created_at,
       updatedAt: row.updated_at,
+      sensors_count: row.sensors_count || 0,
+      co2_equivalent: parseFloat(row.co2_equivalent) || 0,
+      certification_score: row.certification_score,
+      certified_at: row.certified_at,
       // Dados da instituição
       institution_name: row.inst_name,
       institution: row.inst_id ? {
