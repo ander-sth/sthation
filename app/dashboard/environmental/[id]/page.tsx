@@ -71,6 +71,7 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
   const { user } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
 
   // Buscar dados do projeto
   const { data, isLoading, error, mutate } = useSWR(`/api/iac/${id}`, fetcher)
@@ -82,6 +83,132 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
   )
   const proposals = proposalsData?.proposals || []
   const [acceptingProposal, setAcceptingProposal] = useState<string | null>(null)
+
+  // Função para gerar PDF do certificado
+  const handleGeneratePdf = async () => {
+    setIsGeneratingPdf(true)
+    try {
+      // Importar jsPDF dinamicamente
+      const { default: jsPDF } = await import("jspdf")
+      
+      const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.getWidth()
+      
+      // Header
+      doc.setFillColor(10, 47, 47) // #0a2f2f
+      doc.rect(0, 0, pageWidth, 40, "F")
+      
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(24)
+      doc.setFont("helvetica", "bold")
+      doc.text("CERTIFICADO DE IMPACTO AMBIENTAL", pageWidth / 2, 20, { align: "center" })
+      
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "normal")
+      doc.text("STHation - Plataforma de Certificacao Ambiental", pageWidth / 2, 30, { align: "center" })
+      
+      // Reset text color
+      doc.setTextColor(0, 0, 0)
+      
+      // Project Info
+      doc.setFontSize(16)
+      doc.setFont("helvetica", "bold")
+      doc.text("Dados do Projeto", 20, 55)
+      
+      doc.setFontSize(11)
+      doc.setFont("helvetica", "normal")
+      
+      let yPos = 65
+      const lineHeight = 7
+      
+      doc.text(`Titulo: ${project.title}`, 20, yPos)
+      yPos += lineHeight
+      doc.text(`Categoria: ${project.category || "Ambiental"}`, 20, yPos)
+      yPos += lineHeight
+      doc.text(`Localizacao: ${project.location_name || ""}, ${project.location_state || ""}`, 20, yPos)
+      yPos += lineHeight
+      doc.text(`Data de Criacao: ${new Date(project.created_at).toLocaleDateString("pt-BR")}`, 20, yPos)
+      yPos += lineHeight * 2
+      
+      // Metrics
+      doc.setFontSize(16)
+      doc.setFont("helvetica", "bold")
+      doc.text("Metricas de Impacto", 20, yPos)
+      yPos += lineHeight + 3
+      
+      doc.setFontSize(11)
+      doc.setFont("helvetica", "normal")
+      doc.text(`Residuos Processados: ${(project.waste_processed || 0).toLocaleString("pt-BR")} kg`, 20, yPos)
+      yPos += lineHeight
+      doc.text(`CO2 Equivalente Evitado: ${project.co2_equivalent || 0} tCO2e/ano`, 20, yPos)
+      yPos += lineHeight
+      doc.text(`Energia Gerada: ${project.energy_generated || 0} kWh`, 20, yPos)
+      yPos += lineHeight
+      doc.text(`Sensores IoT: ${project.sensors_count || 0} dispositivos`, 20, yPos)
+      yPos += lineHeight * 2
+      
+      // Certification Info
+      if (project.status === "CERTIFIED" || project.polygon_tx_hash) {
+        doc.setFontSize(16)
+        doc.setFont("helvetica", "bold")
+        doc.text("Dados da Certificacao", 20, yPos)
+        yPos += lineHeight + 3
+        
+        doc.setFontSize(11)
+        doc.setFont("helvetica", "normal")
+        doc.text(`Status: Certificado`, 20, yPos)
+        yPos += lineHeight
+        doc.text(`Score de Certificacao: ${project.certification_score || "-"}/100`, 20, yPos)
+        yPos += lineHeight
+        if (project.certified_at) {
+          doc.text(`Data de Certificacao: ${new Date(project.certified_at).toLocaleDateString("pt-BR")}`, 20, yPos)
+          yPos += lineHeight
+        }
+        yPos += lineHeight
+        
+        // Hash Blockchain
+        doc.setFontSize(16)
+        doc.setFont("helvetica", "bold")
+        doc.text("Registro Blockchain", 20, yPos)
+        yPos += lineHeight + 3
+        
+        doc.setFontSize(10)
+        doc.setFont("helvetica", "normal")
+        if (project.polygon_tx_hash) {
+          doc.text("Hash da Transacao (Polygon):", 20, yPos)
+          yPos += lineHeight
+          doc.setFont("courier", "normal")
+          doc.text(project.polygon_tx_hash, 20, yPos)
+          yPos += lineHeight * 2
+        }
+        
+        // QR Code placeholder text
+        doc.setFont("helvetica", "italic")
+        doc.setFontSize(9)
+        doc.text("Este certificado pode ser verificado na blockchain Polygon.", 20, yPos)
+        yPos += lineHeight
+        doc.text(`ID do Projeto: ${project.id}`, 20, yPos)
+      }
+      
+      // Footer
+      doc.setFillColor(240, 240, 240)
+      doc.rect(0, 270, pageWidth, 30, "F")
+      
+      doc.setTextColor(100, 100, 100)
+      doc.setFontSize(8)
+      doc.text("Documento gerado automaticamente pela plataforma STHation", pageWidth / 2, 280, { align: "center" })
+      doc.text(`Data de emissao: ${new Date().toLocaleDateString("pt-BR")} as ${new Date().toLocaleTimeString("pt-BR")}`, pageWidth / 2, 286, { align: "center" })
+      
+      // Save
+      doc.save(`certificado-${project.title.toLowerCase().replace(/\s+/g, "-")}.pdf`)
+      
+    } catch (err) {
+      console.error("Erro ao gerar PDF:", err)
+      alert("Erro ao gerar PDF. Tente novamente.")
+    } finally {
+      setIsGeneratingPdf(false)
+    }
+  }
 
   // Função para aceitar proposta de certificação
   const handleAcceptProposal = async (proposalId: string) => {
@@ -225,9 +352,17 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              Exportar PDF
+            <Button 
+              variant="outline" 
+              onClick={handleGeneratePdf}
+              disabled={isGeneratingPdf}
+            >
+              {isGeneratingPdf ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              {isGeneratingPdf ? "Gerando..." : "Exportar PDF"}
             </Button>
             {canEdit && (
               <Button variant="outline" asChild>
