@@ -661,9 +661,14 @@ function IoTSensorOverview() {
 
 // Stats para Empresa Ambiental - busca dados reais do banco
 function EmpresaAmbientalStats({ userId, institutionId }: { userId: string; institutionId?: string }) {
-  const { data, isLoading } = useApiData<any>(
+  const { data, isLoading, error } = useSWR(
     institutionId ? `/api/iac?type=AMBIENTAL&institutionId=${institutionId}` : null,
-    {}
+    (url) => fetch(url).then(res => res.json()),
+    { 
+      revalidateOnFocus: false,
+      errorRetryCount: 3,
+      errorRetryInterval: 2000,
+    }
   )
   const projects = data?.projects || []
   
@@ -675,14 +680,26 @@ function EmpresaAmbientalStats({ userId, institutionId }: { userId: string; inst
   const awaitingCertification = projects.filter((p: any) => p.status === "SUBMITTED" || p.status === "VALIDATED").length
   const totalCO2 = projects.reduce((sum: number, p: any) => sum + (p.co2_equivalent || p.carbon_credits || p.co2_avoided || 0), 0)
   const totalSensors = projects.reduce((sum: number, p: any) => sum + (p.sensors_count || 0), 0)
+  const totalWasteProcessed = projects.reduce((sum: number, p: any) => sum + (p.waste_processed || 0), 0)
 
   if (isLoading) {
     return (
       <>
-        <StatCard title="Projetos Ativos" value="..." description="Carregando..." icon={FileCheck} highlight />
-        <StatCard title="Sensores IoT" value="..." description="Carregando..." icon={Leaf} />
+        <StatCard title="Projetos" value="..." description="Carregando..." icon={FileCheck} highlight />
+        <StatCard title="Residuos Processados" value="..." description="Carregando..." icon={Leaf} />
         <StatCard title="tCO2e Evitados" value="..." description="Carregando..." icon={TrendingUp} />
         <StatCard title="Certificados" value="..." description="Carregando..." icon={Award} />
+      </>
+    )
+  }
+
+  if (error && !data) {
+    return (
+      <>
+        <StatCard title="Projetos" value="-" description="Erro ao carregar" icon={FileCheck} highlight />
+        <StatCard title="Residuos Processados" value="-" description="Erro ao carregar" icon={Leaf} />
+        <StatCard title="tCO2e Evitados" value="-" description="Erro ao carregar" icon={TrendingUp} />
+        <StatCard title="Certificados" value="-" description="Erro ao carregar" icon={Award} />
       </>
     )
   }
@@ -697,9 +714,9 @@ function EmpresaAmbientalStats({ userId, institutionId }: { userId: string; inst
   highlight
   />
       <StatCard 
-        title="Sensores IoT" 
-        value={totalSensors.toString()} 
-        description="conectados aos projetos" 
+        title="Residuos Processados" 
+        value={`${totalWasteProcessed.toLocaleString("pt-BR")} kg`} 
+        description={`${totalSensors} sensores IoT conectados`} 
         icon={Leaf} 
       />
       <StatCard 
