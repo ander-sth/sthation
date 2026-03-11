@@ -70,6 +70,7 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
   const { id } = use(params)
   const { user } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState("overview")
 
   // Buscar dados do projeto
   const { data, isLoading, error, mutate } = useSWR(`/api/iac/${id}`, fetcher)
@@ -355,7 +356,7 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
 <TabsTrigger value="overview">Visao Geral</TabsTrigger>
                 <TabsTrigger value="evidences">Evidencias ({evidences.length})</TabsTrigger>
@@ -389,7 +390,7 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
                 </div>
                 <Button 
                   className="bg-amber-600 hover:bg-amber-700 text-white"
-                  onClick={() => document.querySelector('[value="certification"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}
+                  onClick={() => setActiveTab("certification")}
                 >
                   Ver Propostas
                 </Button>
