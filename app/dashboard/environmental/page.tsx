@@ -65,9 +65,9 @@ export default function EnvironmentalProjectsPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [categoryFilter, setCategoryFilter] = useState("all")
 
-  // Buscar projetos ambientais da API (dados reais do banco) - filtrados pelo owner_id do usuario
+  // Buscar projetos ambientais da API (dados reais do banco) - filtrados pela instituição do usuario
   const { data, isLoading } = useSWR(
-    user?.id ? `/api/iac?type=AMBIENTAL&owner_id=${user.id}&limit=50` : null, 
+    user?.institutionId ? `/api/iac?type=AMBIENTAL&institutionId=${user.institutionId}&limit=50` : null, 
     fetcher, 
     { revalidateOnFocus: false }
   )

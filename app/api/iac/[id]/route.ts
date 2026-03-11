@@ -27,18 +27,26 @@ export async function GET(
       WHERE iac.id = ${id}
     `
 
+    console.log("[v0] API IAC - Buscando projeto ID:", id, "Encontrado:", iacs.length)
+    
     if (iacs.length === 0) {
       return NextResponse.json({ error: "IAC not found" }, { status: 404 })
     }
 
     const iac = iacs[0]
+    console.log("[v0] API IAC - Projeto encontrado:", iac.title, "Status:", iac.status)
 
-    // Buscar evidencias
-    const evidences = await sql`
-      SELECT * FROM evidences 
-      WHERE iac_id = ${id}
-      ORDER BY captured_at DESC
-    `
+    // Buscar evidencias (tabela pode nao existir)
+    let evidences: any[] = []
+    try {
+      evidences = await sql`
+        SELECT * FROM evidences 
+        WHERE iac_id = ${id}
+        ORDER BY captured_at DESC
+      `
+    } catch (e) {
+      // Tabela evidences pode nao existir ainda
+    }
 
     // Buscar audit log (tabela pode nao existir)
     let auditLog: any[] = []
