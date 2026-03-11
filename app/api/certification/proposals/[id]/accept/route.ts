@@ -50,10 +50,10 @@ export async function POST(
       WHERE iac_id = ${proposal.iac_id} AND id != ${id} AND status = 'PENDING'
     `
 
-    // Atualizar status do projeto para "EM_CERTIFICACAO"
+    // Atualizar status do projeto para "VALIDATED" (proposta aceita, aguardando certificação final)
     await sql`
       UPDATE impact_action_cards 
-      SET status = 'VALIDATING', updated_at = NOW()
+      SET status = 'VALIDATED', updated_at = NOW()
       WHERE id = ${proposal.iac_id}
     `
 
