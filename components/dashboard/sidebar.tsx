@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { UserRole, ROLE_PERMISSIONS } from "@/lib/types/users"
+import { NotificationBell } from "@/components/notifications/notification-bell"
 import {
   LayoutDashboard,
   FileCheck,
@@ -214,13 +215,16 @@ export function MobileHeader() {
             <Image src="/sthation-logo.png" alt="STHATION" width={160} height={40} className="h-8 w-auto" />
           </div>
         </Link>
-        <button
-          onClick={() => setOpen(!open)}
-          className="rounded-md p-2 text-foreground hover:bg-muted"
-          aria-label={open ? "Fechar menu" : "Abrir menu"}
-        >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <button
+            onClick={() => setOpen(!open)}
+            className="rounded-md p-2 text-foreground hover:bg-muted"
+            aria-label={open ? "Fechar menu" : "Abrir menu"}
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </header>
 
       {/* Overlay */}
