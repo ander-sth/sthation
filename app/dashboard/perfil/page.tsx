@@ -29,7 +29,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react"
-import { UserRole } from "@/types"
+import { UserRole } from "@/lib/types/users"
 
 // Mapeamento de roles para labels
 const ROLE_LABELS: Record<string, string> = {
