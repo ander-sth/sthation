@@ -1,12 +1,13 @@
-"use server"
+// Biblioteca para integracao com Polygon blockchain
+// Funciona em modo simulacao quando as variaveis de ambiente nao estao configuradas
 
-import { ethers } from "ethers"
-
-// Configuracao Polygon
-const POLYGON_RPC_URL = process.env.POLYGON_RPC_URL || "https://polygon-rpc.com"
-const POLYGON_TESTNET_RPC_URL = process.env.POLYGON_TESTNET_RPC_URL || "https://rpc-amoy.polygon.technology"
-const CONTRACT_ADDRESS = process.env.STHATION_CONTRACT_ADDRESS || ""
-const PRIVATE_KEY = process.env.STHATION_WALLET_PRIVATE_KEY || ""
+// Configuracao Polygon - lidas em runtime
+const getConfig = () => ({
+  POLYGON_RPC_URL: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
+  POLYGON_TESTNET_RPC_URL: process.env.POLYGON_TESTNET_RPC_URL || "https://rpc-amoy.polygon.technology",
+  CONTRACT_ADDRESS: process.env.STHATION_CONTRACT_ADDRESS || "",
+  PRIVATE_KEY: process.env.STHATION_WALLET_PRIVATE_KEY || ""
+})
 
 // ABI simplificado para o contrato de certificados
 const CERTIFICATE_ABI = [
@@ -16,32 +17,38 @@ const CERTIFICATE_ABI = [
   "event CertificateRegistered(string indexed projectId, string certHash, uint256 co2Avoided, uint256 timestamp)"
 ]
 
-// Funcao para obter provider
-export function getProvider(testnet = true) {
-  const rpcUrl = testnet ? POLYGON_TESTNET_RPC_URL : POLYGON_RPC_URL
+// Funcao para obter provider - importa ethers dinamicamente
+export async function getProvider(testnet = true) {
+  const { ethers } = await import("ethers")
+  const config = getConfig()
+  const rpcUrl = testnet ? config.POLYGON_TESTNET_RPC_URL : config.POLYGON_RPC_URL
   return new ethers.JsonRpcProvider(rpcUrl)
 }
 
 // Funcao para obter wallet
-export function getWallet(testnet = true) {
-  if (!PRIVATE_KEY) {
+export async function getWallet(testnet = true) {
+  const { ethers } = await import("ethers")
+  const config = getConfig()
+  if (!config.PRIVATE_KEY) {
     throw new Error("STHATION_WALLET_PRIVATE_KEY nao configurada")
   }
-  const provider = getProvider(testnet)
-  return new ethers.Wallet(PRIVATE_KEY, provider)
+  const provider = await getProvider(testnet)
+  return new ethers.Wallet(config.PRIVATE_KEY, provider)
 }
 
 // Funcao para obter contrato
-export function getContract(testnet = true) {
-  if (!CONTRACT_ADDRESS) {
+export async function getContract(testnet = true) {
+  const { ethers } = await import("ethers")
+  const config = getConfig()
+  if (!config.CONTRACT_ADDRESS) {
     throw new Error("STHATION_CONTRACT_ADDRESS nao configurado")
   }
-  const wallet = getWallet(testnet)
-  return new ethers.Contract(CONTRACT_ADDRESS, CERTIFICATE_ABI, wallet)
+  const wallet = await getWallet(testnet)
+  return new ethers.Contract(config.CONTRACT_ADDRESS, CERTIFICATE_ABI, wallet)
 }
 
 // Gerar hash do certificado
-export function generateCertificateHash(data: {
+export async function generateCertificateHash(data: {
   projectId: string
   title: string
   institutionId: string
@@ -49,7 +56,8 @@ export function generateCertificateHash(data: {
   wasteProcessed: number
   certifiedAt: string
   certifierName: string
-}): string {
+}): Promise<string> {
+  const { ethers } = await import("ethers")
   const message = JSON.stringify({
     projectId: data.projectId,
     title: data.title,
@@ -74,7 +82,8 @@ export async function registerCertificateOnChain(
   testnet = true
 ): Promise<{ txHash: string; blockNumber: number }> {
   try {
-    const contract = getContract(testnet)
+    const { ethers } = await import("ethers")
+    const contract = await getContract(testnet)
     
     // Converter valores para wei/unidades do contrato
     const co2Wei = ethers.parseUnits(co2Avoided.toString(), 18)
@@ -103,7 +112,7 @@ export async function verifyCertificateOnChain(
   testnet = true
 ): Promise<boolean> {
   try {
-    const contract = getContract(testnet)
+    const contract = await getContract(testnet)
     return await contract.verifyCertificate(projectId, certHash)
   } catch (error) {
     console.error("[BLOCKCHAIN] Erro ao verificar certificado:", error)
@@ -123,7 +132,8 @@ export async function getCertificateFromChain(
   registeredBy: string
 } | null> {
   try {
-    const contract = getContract(testnet)
+    const { ethers } = await import("ethers")
+    const contract = await getContract(testnet)
     const result = await contract.getCertificate(projectId)
     
     return {
