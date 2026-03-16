@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,7 +8,7 @@ import { CheckCircle2, Heart, Download, ArrowRight, Share2, Loader2 } from "luci
 import Link from "next/link"
 import confetti from "canvas-confetti"
 
-export default function DoacaoSucessoPage() {
+function DoacaoSucessoContent() {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get("session_id")
   const [donation, setDonation] = useState<any>(null)
@@ -140,5 +140,17 @@ export default function DoacaoSucessoPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function DoacaoSucessoPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center p-4">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    }>
+      <DoacaoSucessoContent />
+    </Suspense>
   )
 }
