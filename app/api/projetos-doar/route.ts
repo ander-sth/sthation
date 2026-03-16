@@ -17,22 +17,43 @@ export async function GET(req: Request) {
   const limit = parseInt(params.get("limit") || "20")
 
   try {
-    // Query usando tabelas reais do banco
-    const data = await sql`
-      SELECT 
-        fp.id, fp.title, fp.description, fp.status,
-        fp.goal_amount, fp.current_amount, fp.donors_count, fp.deadline,
-        fp.iac_id, fp.created_at,
-        iac.category, iac.type as iac_type, iac.location_name, iac.location_state,
-        iac.estimated_beneficiaries,
-        i.id as inst_id, i.name as inst_name, i.is_verified as inst_verified
-      FROM funding_projects fp
-      LEFT JOIN impact_action_cards iac ON fp.iac_id = iac.id
-      LEFT JOIN institutions i ON iac.institution_id = i.id
-      WHERE fp.status = 'FUNDING'
-      ORDER BY fp.created_at DESC
-      LIMIT ${limit}
-    `
+    // Primeiro, tentar buscar de funding_projects
+    let data: any[] = []
+    
+    try {
+      data = await sql`
+        SELECT 
+          fp.id, fp.title, fp.description, fp.status,
+          fp.goal_amount, fp.current_amount, fp.donors_count, fp.deadline,
+          fp.iac_id, fp.created_at,
+          iac.category, iac.type as iac_type, iac.location_name, iac.location_state,
+          iac.estimated_beneficiaries,
+          i.id as inst_id, i.name as inst_name, i.is_verified as inst_verified
+        FROM funding_projects fp
+        LEFT JOIN impact_action_cards iac ON fp.iac_id = iac.id
+        LEFT JOIN institutions i ON iac.institution_id = i.id
+        WHERE fp.status = 'FUNDING'
+        ORDER BY fp.created_at DESC
+        LIMIT ${limit}
+      `
+    } catch {
+      // Se funding_projects nao existe, buscar direto de impact_action_cards
+      data = await sql`
+        SELECT 
+          iac.id, iac.title, iac.description, iac.status,
+          iac.funding_goal as goal_amount, iac.total_donated as current_amount, 
+          iac.donors_count, iac.created_at,
+          iac.id as iac_id,
+          iac.category, iac.type as iac_type, iac.location_name, iac.location_state,
+          iac.estimated_beneficiaries,
+          i.id as inst_id, i.name as inst_name, i.is_verified as inst_verified
+        FROM impact_action_cards iac
+        LEFT JOIN institutions i ON iac.institution_id = i.id
+        WHERE iac.status IN ('SUBMITTED', 'VALIDATED', 'CERTIFIED', 'EM_ANDAMENTO')
+        ORDER BY iac.created_at DESC
+        LIMIT ${limit}
+      `
+    }
 
     // Mapear para formato esperado pelo frontend
     const projects = (data || []).map((r: any) => ({
