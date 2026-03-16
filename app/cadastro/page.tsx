@@ -35,7 +35,7 @@ const cadastroOptions = [
     title: "Instituicao Social",
     description: "ONGs, associacoes e entidades que executam projetos de impacto social",
     icon: Building2,
-    href: "/cadastro/instituicao?type=INSTITUICAO",
+    href: "/cadastro/instituicao",
     color: "text-blue-500",
     bgColor: "bg-blue-500/10",
     features: [
@@ -49,7 +49,7 @@ const cadastroOptions = [
     title: "Empresa Ambiental",
     description: "Empresas que geram creditos de carbono e impacto ambiental mensuravel",
     icon: Leaf,
-    href: "/cadastro/instituicao?type=EMPRESA_AMBIENTAL",
+    href: "/cadastro/empresa-ambiental",
     color: "text-emerald-500",
     bgColor: "bg-emerald-500/10",
     features: [
@@ -63,7 +63,7 @@ const cadastroOptions = [
     title: "Prefeitura / Governo",
     description: "Orgaos publicos que desejam validar e registrar projetos governamentais",
     icon: Landmark,
-    href: "/cadastro/instituicao?type=PREFEITURA",
+    href: "/cadastro/prefeitura",
     color: "text-amber-500",
     bgColor: "bg-amber-500/10",
     features: [
