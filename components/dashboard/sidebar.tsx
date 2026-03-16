@@ -32,6 +32,7 @@ import {
   GitBranch,
   Menu,
   X,
+  User,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { RankingShareCard } from "./ranking-share-card"
@@ -178,6 +179,9 @@ const navItems: NavItem[] = [
     label: "Split de Pagamento",
     roles: [UserRole.ADMIN],
   },
+
+  // Perfil - para todos
+  { href: "/dashboard/perfil", icon: User, label: "Meu Perfil" },
 
   // Configuracoes - para todos
   { href: "/dashboard/settings", icon: Settings, label: "Configuracoes" },
