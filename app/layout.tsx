@@ -12,11 +12,34 @@ const _spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-spac
 const _inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 export const metadata: Metadata = {
-  title: "STHATION - Infraestrutura da Verdade para o Mercado de Impacto",
+  title: {
+    default: "STHATION - Infraestrutura da Verdade para o Mercado de Impacto",
+    template: "%s | STHATION",
+  },
   description:
-    "Plataforma que transforma alegações de impacto ambiental em fatos comprovados criptograficamente através do protocolo NOBIS e Bitcoin Ordinals.",
+    "Plataforma que transforma alegacoes de impacto ambiental em fatos comprovados criptograficamente atraves do protocolo NOBIS e Polygon blockchain.",
   generator: "STHATION",
-  keywords: ["ESG", "carbono", "sustentabilidade", "blockchain", "bitcoin", "ordinals", "impacto ambiental"],
+  keywords: ["ESG", "carbono", "sustentabilidade", "blockchain", "polygon", "impacto ambiental", "certificacao", "creditos de carbono"],
+  authors: [{ name: "STHATION" }],
+  creator: "STHATION",
+  publisher: "STHATION",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://sthation.com"),
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    siteName: "STHATION",
+    title: "STHATION - Infraestrutura da Verdade para o Mercado de Impacto",
+    description: "Plataforma de certificacao e validacao de impacto ambiental com blockchain.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "STHATION",
+    description: "Plataforma de certificacao e validacao de impacto ambiental com blockchain.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   icons: {
     icon: [
       {

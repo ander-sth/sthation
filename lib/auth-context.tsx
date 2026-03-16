@@ -40,9 +40,12 @@ interface User {
 interface AuthContextType {
   user: User | null
   token: string | null
+  isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, name: string, role: string) => Promise<void>
   logout: () => void
+  refreshUser: () => Promise<void>
+  refreshToken: () => Promise<void>
   isLoading: boolean
   can: (permission: keyof (typeof ROLE_PERMISSIONS)[UserRole]) => boolean
 }
@@ -132,14 +135,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("user_id")
   }
 
+  const refreshUser = async () => {
+    const savedToken = localStorage.getItem("sthation_token")
+    if (!savedToken) return
+
+    try {
+      const res = await fetch("/api/auth/me", {
+        headers: { Authorization: `Bearer ${savedToken}` },
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        const mappedRole = mapRoleFromDB(data.user.role)
+        const userData = {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: mappedRole,
+          isVerified: data.user.isVerified,
+          checkerScore: data.user.checkerScore,
+          institutionId: data.institution?.id,
+          institutionName: data.institution?.name,
+          institutionType: data.institution?.type,
+        }
+        setUser(userData)
+        localStorage.setItem("sthation_user", JSON.stringify(userData))
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar usuario:", error)
+    }
+  }
+
+  const refreshToken = async () => {
+    const savedToken = localStorage.getItem("sthation_token")
+    if (!savedToken) return
+
+    try {
+      const res = await fetch("/api/auth/refresh", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${savedToken}` },
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        setToken(data.token)
+        localStorage.setItem("sthation_token", data.token)
+      }
+    } catch (error) {
+      console.error("Erro ao renovar token:", error)
+    }
+  }
+
   const can = (permission: keyof (typeof ROLE_PERMISSIONS)[UserRole]): boolean => {
     if (!user) return false
     const permissions = ROLE_PERMISSIONS[user.role]
     return permissions ? (permissions[permission] as boolean) : false
   }
 
+  const isAuthenticated = !!user && !!token
+
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, isLoading, can }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      isAuthenticated,
+      login, 
+      register, 
+      logout, 
+      refreshUser,
+      refreshToken,
+      isLoading, 
+      can 
+    }}>
       {children}
     </AuthContext.Provider>
   )
