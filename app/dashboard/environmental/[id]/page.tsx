@@ -10,35 +10,30 @@ import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import {
-  ArrowLeft,
   Leaf,
   MapPin,
   Calendar,
   FileCheck,
-  Cpu,
-  BarChart3,
-  Download,
-  Send,
-  Clock,
   CheckCircle2,
   XCircle,
-  AlertCircle,
-  Shield,
+  Clock,
+  Send,
+  AlertTriangle,
   Loader2,
-  ExternalLink,
   Building2,
-  User,
-  FileText,
-  Image as ImageIcon,
-  Activity,
-  Thermometer,
-  Droplets,
-  Scale,
-  Zap,
+  Download,
   Pencil,
   Lock,
-  DollarSign,
-  MessageSquare,
+  Thermometer,
+  Droplets,
+  Activity,
+  BarChart3,
+  Scale,
+  Eye,
+  Trash2,
+  ExternalLink,
+  Hash,
+  Shield,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
@@ -390,6 +385,48 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
               <Button variant="outline" disabled className="gap-2">
                 <Lock className="h-4 w-4" />
                 Aguardando Certificacao
+              </Button>
+            )}
+            {project.status === "CERTIFIED" && !project.polygon_tx_hash && canEdit && (
+              <Button 
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={async () => {
+                  setIsSubmitting(true)
+                  try {
+                    const res = await fetch("/api/blockchain/inscribe", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ projectId: project.id })
+                    })
+                    const data = await res.json()
+                    if (res.ok) {
+                      alert(`Inscrito na blockchain! Hash: ${data.txHash}`)
+                      mutate()
+                    } else {
+                      alert(data.error || "Erro ao inscrever")
+                    }
+                  } catch (e) {
+                    alert("Erro de conexao")
+                  } finally {
+                    setIsSubmitting(false)
+                  }
+                }}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Hash className="mr-2 h-4 w-4" />
+                )}
+                Inscrever na Blockchain
+              </Button>
+            )}
+            {project.polygon_tx_hash && (
+              <Button variant="outline" className="text-purple-600 border-purple-300" asChild>
+                <Link href={`/verificar?txHash=${project.polygon_tx_hash}`} target="_blank">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Verificar Certificado
+                </Link>
               </Button>
             )}
           </div>

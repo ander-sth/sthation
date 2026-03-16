@@ -187,6 +187,22 @@ const navItems: NavItem[] = [
     roles: [UserRole.ADMIN],
   },
 
+  // Admin gestao de usuarios
+  {
+    href: "/dashboard/admin/usuarios",
+    icon: Users,
+    label: "Gestao Usuarios",
+    roles: [UserRole.ADMIN],
+  },
+
+  // Admin aprovacoes
+  {
+    href: "/dashboard/admin/aprovacoes",
+    icon: Award,
+    label: "Aprovacoes",
+    roles: [UserRole.ADMIN],
+  },
+
   // Perfil - para todos
   { href: "/dashboard/perfil", icon: User, label: "Meu Perfil" },
 
