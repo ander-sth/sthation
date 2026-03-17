@@ -39,6 +39,7 @@ import {
   FileText,
   Cpu,
   ArrowLeft,
+  User,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
