@@ -21,14 +21,11 @@ import {
   UserPlus
 } from "lucide-react"
 import useSWR from "swr"
-import Image from "next/image"
-import { Badge } from "@/components/ui/badge"
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 export default function NobisCoreLanding() {
   const { data: stats } = useSWR("/api/nobiscore/stats", fetcher)
-  const { data: projectsData } = useSWR("/api/nobiscore/projects?limit=6", fetcher)
 
   return (
     <div className="min-h-screen bg-white text-black">
@@ -230,119 +227,6 @@ export default function NobisCoreLanding() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Projetos Certificados - Disponíveis para Negociação */}
-      <section id="projetos" className="py-24 px-6">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200 mb-6">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-              <span className="text-sm text-emerald-700 font-medium">Projetos Verificados</span>
-            </div>
-            <h2 className="text-4xl font-bold mb-4">Projetos Certificados</h2>
-            <p className="text-black/60 max-w-xl mx-auto">
-              Projetos com impacto real, verificados e certificados na blockchain. 
-              Disponiveis para inscricao no Bitcoin.
-            </p>
-          </div>
-
-          {projectsData?.projects && projectsData.projects.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projectsData.projects.map((project: any) => (
-                <div key={project.id} className="group rounded-2xl bg-white border border-black/10 overflow-hidden hover:border-black/20 hover:shadow-lg transition-all">
-                  {/* Imagem do Projeto */}
-                  <div className="relative h-48 bg-gradient-to-br from-emerald-100 to-teal-50 overflow-hidden">
-                    {project.cover_image_url ? (
-                      <Image
-                        src={project.cover_image_url}
-                        alt={project.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Leaf className="h-16 w-16 text-emerald-300" />
-                      </div>
-                    )}
-                    {/* Badge de Score */}
-                    <div className="absolute top-3 right-3">
-                      <div className="px-3 py-1 rounded-full bg-emerald-500 text-white text-sm font-bold shadow-lg">
-                        {project.score || 85}/100
-                      </div>
-                    </div>
-                    {/* Badge de Categoria */}
-                    <div className="absolute bottom-3 left-3">
-                      <Badge variant="secondary" className="bg-white/90 text-black/80 backdrop-blur-sm">
-                        {project.category || "Ambiental"}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Conteúdo */}
-                  <div className="p-5">
-                    <h3 className="font-semibold text-lg mb-1 line-clamp-1 group-hover:text-emerald-700 transition-colors">
-                      {project.title}
-                    </h3>
-                    <p className="text-sm text-black/50 mb-4 flex items-center gap-1">
-                      <Globe className="h-3 w-3" />
-                      {project.institution_name || "Instituicao"}
-                    </p>
-
-                    {/* Metricas de Impacto */}
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="p-2 rounded-lg bg-emerald-50 text-center">
-                        <div className="text-lg font-bold text-emerald-700">
-                          {project.co2_equivalent ? `${(project.co2_equivalent / 1000).toFixed(1)}t` : "-"}
-                        </div>
-                        <div className="text-xs text-emerald-600">CO2 Evitado</div>
-                      </div>
-                      <div className="p-2 rounded-lg bg-blue-50 text-center">
-                        <div className="text-lg font-bold text-blue-700">
-                          {project.waste_processed ? `${(project.waste_processed / 1000).toFixed(1)}t` : "-"}
-                        </div>
-                        <div className="text-xs text-blue-600">Residuos</div>
-                      </div>
-                    </div>
-
-                    {/* Hash do Certificado */}
-                    {project.certificate_hash && (
-                      <div className="flex items-center gap-2 p-2 rounded-lg bg-black/5 mb-4">
-                        <Shield className="h-4 w-4 text-black/40 shrink-0" />
-                        <code className="text-xs text-black/50 truncate font-mono">
-                          {project.certificate_hash.substring(0, 20)}...
-                        </code>
-                      </div>
-                    )}
-
-                    {/* Botão de Ação */}
-                    <Link href={`/nobiscore/hall?project=${project.id}`}>
-                      <Button variant="outline" className="w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50">
-                        <ArrowRight className="h-4 w-4 mr-2" />
-                        Ver Detalhes
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16 rounded-2xl bg-black/5 border border-black/10">
-              <Leaf className="h-12 w-12 mx-auto text-black/20 mb-4" />
-              <p className="text-black/40">Nenhum projeto certificado ainda</p>
-            </div>
-          )}
-
-          {/* CTA para ver todos */}
-          <div className="text-center mt-10">
-            <Link href="/nobiscore/hall">
-              <Button size="lg" variant="outline" className="border-black/20 text-black hover:bg-black/5 rounded-full px-8">
-                Ver Todos os Projetos
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
           </div>
         </div>
       </section>
