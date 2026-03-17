@@ -35,6 +35,9 @@ import {
   ExternalLink,
   Hash,
   Shield,
+  ImageIcon,
+  FileText,
+  Cpu,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
