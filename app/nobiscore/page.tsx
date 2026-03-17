@@ -43,11 +43,14 @@ export default function NobisCoreLanding() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">
+            <Link href="/nobiscore/hall" className="text-sm text-black/60 hover:text-black transition-colors">
+              Hall de Projetos
+            </Link>
             <a href="#como-funciona" className="text-sm text-black/60 hover:text-black transition-colors">
               Como Funciona
             </a>
             <a href="#beneficios" className="text-sm text-black/60 hover:text-black transition-colors">
-              Benefícios
+              Beneficios
             </a>
             <a href="#tecnologia" className="text-sm text-black/60 hover:text-black transition-colors">
               Tecnologia
