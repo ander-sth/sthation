@@ -67,10 +67,21 @@ type PendingValidation = {
   currentApprovalRate: number
 }
 
+const MIN_SCORE_FOR_VALIDATION = 70
+
 export default function VCAPage() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [selectedVCA, setSelectedVCA] = useState<PendingValidation | null>(null)
+  
+  // Buscar score do checker
+  const { data: checkerData } = useSWR(
+    user?.id ? `/api/checkers/ranking?userId=${user.id}` : null,
+    fetcher
+  )
+  const userScore = checkerData?.userRank?.score || 0
+  const hasCompletedAcademy = checkerData?.userRank?.academy_completed || false
+  const canValidate = userScore >= MIN_SCORE_FOR_VALIDATION && hasCompletedAcademy
   
   // Buscar validacoes pendentes da API (dados reais)
   const { data, isLoading } = useSWR("/api/vca/pending", fetcher, {
@@ -93,18 +104,50 @@ export default function VCAPage() {
   const [isVoting, setIsVoting] = useState(false)
   const [checklistScores, setChecklistScores] = useState<Record<string, number>>({})
 
-  // Verificar se usuário pode validar
-  const canValidate = user?.role === UserRole.CHECKER || user?.role === UserRole.ADMIN
+  // Verificar se usuário tem role de Checker
+  const isChecker = user?.role === UserRole.CHECKER || user?.role === UserRole.ADMIN
 
-  if (!canValidate) {
+  // Se nao for Checker, mostrar mensagem
+  if (!isChecker) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
         <h2 className="text-2xl font-bold mb-2">Acesso Restrito</h2>
         <p className="text-foreground/60 max-w-md">
-          Apenas Checkers certificados pela Sthation Academy podem participar do processo de Validação Comunitária
+          Apenas Checkers certificados pela Sthation Academy podem participar do processo de Validacao Comunitaria
           (VCA).
         </p>
+        <Button className="mt-4" asChild>
+          <a href="/dashboard/academy">Acessar Sthation Academy</a>
+        </Button>
+      </div>
+    )
+  }
+
+  // Se for Checker mas nao completou Academy ou score baixo
+  if (!canValidate) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Formacao Incompleta</h2>
+        {!hasCompletedAcademy ? (
+          <p className="text-foreground/60 max-w-md">
+            Voce precisa completar a trilha de formacao na Sthation Academy antes de poder participar das validacoes.
+          </p>
+        ) : (
+          <p className="text-foreground/60 max-w-md">
+            Seu score atual e <span className="font-bold text-amber-600">{userScore}</span>. 
+            Voce precisa de pelo menos <span className="font-bold">{MIN_SCORE_FOR_VALIDATION}</span> pontos para validar projetos.
+            Continue participando para aumentar seu score.
+          </p>
+        )}
+        <div className="mt-6 p-4 rounded-lg bg-muted w-full max-w-sm">
+          <div className="flex justify-between text-sm mb-2">
+            <span>Seu Score</span>
+            <span className="font-bold">{userScore} / {MIN_SCORE_FOR_VALIDATION}</span>
+          </div>
+          <Progress value={(userScore / MIN_SCORE_FOR_VALIDATION) * 100} className="h-2" />
+        </div>
         <Button className="mt-4" asChild>
           <a href="/dashboard/academy">Acessar Sthation Academy</a>
         </Button>
