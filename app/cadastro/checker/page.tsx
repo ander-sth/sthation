@@ -161,7 +161,7 @@ export default function CadastroCheckerPage() {
     cpf: isCpfValid,
     city: !!formData.city.trim(),
     state: !!formData.state,
-    motivation: formData.motivation.length >= 50,
+    motivation: formData.motivation.length >= 10,
     areasOfInterest: formData.areasOfInterest.length >= 1,
     acceptedTerms: acceptedTerms,
     password: user ? true : formData.password.length >= 6,
@@ -177,7 +177,7 @@ export default function CadastroCheckerPage() {
   if (!validations.cpf) missingFields.push("CPF completo (11 digitos)")
   if (!validations.city) missingFields.push("Cidade")
   if (!validations.state) missingFields.push("Estado")
-  if (!validations.motivation) missingFields.push(`Motivacao (${formData.motivation.length}/50 caracteres)`)
+  if (!validations.motivation) missingFields.push(`Motivacao (${formData.motivation.length}/10 caracteres)`)
   if (!validations.areasOfInterest) missingFields.push("Pelo menos 1 area de interesse")
   if (!validations.acceptedTerms) missingFields.push("Aceitar os termos")
   if (!user && !validations.password) missingFields.push("Senha (min 6 caracteres)")
@@ -424,7 +424,7 @@ export default function CadastroCheckerPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="motivation" className="text-white">Motivacao *</Label>
-                <p className="text-xs text-white/50">Conte por que voce quer ser um Checker (minimo 50 caracteres)</p>
+                <p className="text-xs text-white/50">Conte por que voce quer ser um Checker (minimo 10 caracteres)</p>
                 <Textarea
                   id="motivation"
                   value={formData.motivation}
@@ -433,7 +433,7 @@ export default function CadastroCheckerPage() {
                   rows={4}
                   className="bg-white/5 border-white/20 text-white placeholder:text-white/40 resize-none"
                 />
-                <p className="text-xs text-white/40 text-right">{formData.motivation.length}/50 caracteres</p>
+                <p className="text-xs text-white/40 text-right">{formData.motivation.length}/10 caracteres</p>
               </div>
 
               {/* Termos */}
