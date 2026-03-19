@@ -150,16 +150,38 @@ export default function CadastroCheckerPage() {
     }
   }
 
-  const isValid = 
-    formData.name && 
-    formData.email && 
-    formData.cpf.length >= 14 &&
-    formData.city &&
-    formData.state &&
-    formData.motivation.length >= 50 &&
-    formData.areasOfInterest.length >= 1 &&
-    acceptedTerms &&
-    (user || (formData.password.length >= 6 && formData.password === formData.confirmPassword))
+  // CPF tem 11 digitos = 14 caracteres formatados (000.000.000-00)
+  const cpfDigits = formData.cpf.replace(/\D/g, "")
+  const isCpfValid = cpfDigits.length === 11
+
+  // Validação individual de cada campo
+  const validations = {
+    name: !!formData.name.trim(),
+    email: !!formData.email.trim() && formData.email.includes("@"),
+    cpf: isCpfValid,
+    city: !!formData.city.trim(),
+    state: !!formData.state,
+    motivation: formData.motivation.length >= 50,
+    areasOfInterest: formData.areasOfInterest.length >= 1,
+    acceptedTerms: acceptedTerms,
+    password: user ? true : formData.password.length >= 6,
+    passwordMatch: user ? true : formData.password === formData.confirmPassword,
+  }
+
+  const isValid = Object.values(validations).every(v => v)
+  
+  // Campos faltantes para mostrar na UI
+  const missingFields: string[] = []
+  if (!validations.name) missingFields.push("Nome")
+  if (!validations.email) missingFields.push("Email valido")
+  if (!validations.cpf) missingFields.push("CPF completo (11 digitos)")
+  if (!validations.city) missingFields.push("Cidade")
+  if (!validations.state) missingFields.push("Estado")
+  if (!validations.motivation) missingFields.push(`Motivacao (${formData.motivation.length}/50 caracteres)`)
+  if (!validations.areasOfInterest) missingFields.push("Pelo menos 1 area de interesse")
+  if (!validations.acceptedTerms) missingFields.push("Aceitar os termos")
+  if (!user && !validations.password) missingFields.push("Senha (min 6 caracteres)")
+  if (!user && !validations.passwordMatch) missingFields.push("Senhas iguais")
 
   if (success) {
     return (
@@ -433,10 +455,22 @@ export default function CadastroCheckerPage() {
                 </div>
               </div>
 
+              {/* Mostrar campos faltantes */}
+              {missingFields.length > 0 && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                  <p className="text-sm text-amber-400 font-medium mb-1">Campos pendentes:</p>
+                  <ul className="text-xs text-amber-400/80 space-y-0.5">
+                    {missingFields.map((field, i) => (
+                      <li key={i}>• {field}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <Button
                 onClick={handleSubmit}
                 disabled={!isValid || isLoading}
-                className="w-full bg-cyan-500 hover:bg-cyan-400 text-[#0a2f2f]"
+                className="w-full bg-cyan-500 hover:bg-cyan-400 text-[#0a2f2f] disabled:opacity-50"
               >
                 {isLoading ? (
                   <>
