@@ -47,7 +47,7 @@ export default function NobisCoreLanding() {
               Como Funciona
             </a>
             <a href="#beneficios" className="text-sm text-black/60 hover:text-black transition-colors">
-              Benefícios
+              Beneficios
             </a>
             <a href="#tecnologia" className="text-sm text-black/60 hover:text-black transition-colors">
               Tecnologia
@@ -55,9 +55,14 @@ export default function NobisCoreLanding() {
           </nav>
 
           <div className="flex items-center gap-3">
+            <Link href="/nobiscore/hall">
+              <Button variant="outline" className="border-emerald-500 text-emerald-700 hover:bg-emerald-50 font-semibold rounded-full px-5">
+                Hall de Projetos
+              </Button>
+            </Link>
             <Link href="/">
               <Button variant="ghost" className="text-black/60 hover:text-black hover:bg-black/5">
-                Voltar à Sthation
+                Voltar a Sthation
               </Button>
             </Link>
             <Link href="/nobiscore/login">

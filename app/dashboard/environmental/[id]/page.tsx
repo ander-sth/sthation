@@ -19,6 +19,7 @@ import {
   Clock,
   Send,
   AlertTriangle,
+  AlertCircle,
   Loader2,
   Building2,
   Download,
@@ -34,6 +35,11 @@ import {
   ExternalLink,
   Hash,
   Shield,
+  ImageIcon,
+  FileText,
+  Cpu,
+  ArrowLeft,
+  User,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
@@ -730,7 +736,7 @@ export default function EnvironmentalProjectDetailPage({ params }: { params: Pro
                 </div>
               </div>
 
-              {/* Propostas de Certificação */}
+              {/* Propostas de Certifica��ão */}
               {(project.status === "SUBMITTED" || project.status === "VALIDATED" || project.status === "CERTIFIED") && proposals.length > 0 && (
                 <>
                   <Separator />
