@@ -154,10 +154,12 @@ export default function CadastroCheckerPage() {
     formData.name && 
     formData.email && 
     formData.cpf.length >= 14 &&
+    formData.city &&
+    formData.state &&
     formData.motivation.length >= 50 &&
     formData.areasOfInterest.length >= 1 &&
     acceptedTerms &&
-    (user || (formData.password && formData.password === formData.confirmPassword))
+    (user || (formData.password.length >= 6 && formData.password === formData.confirmPassword))
 
   if (success) {
     return (
