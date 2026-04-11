@@ -62,10 +62,10 @@ export async function POST(req: Request) {
     // Para ANALISTA_CERTIFICADOR, iniciar como nao verificado
     const isVerified = finalRole === "ANALISTA_CERTIFICADOR" ? false : false
 
-    // Criar usuario
+    // Criar usuario (sem coluna cpf que pode nao existir)
     const result = await sql`
       INSERT INTO users (
-        id, email, password_hash, name, role, phone, cpf, is_verified, is_active, checker_score
+        id, email, password_hash, name, role, phone, is_verified, is_active, checker_score
       ) VALUES (
         gen_random_uuid(),
         ${email.toLowerCase()},
@@ -73,7 +73,6 @@ export async function POST(req: Request) {
         ${finalName},
         ${finalRole},
         ${finalPhone},
-        ${finalDoc},
         ${isVerified},
         true,
         ${checkerScore}
